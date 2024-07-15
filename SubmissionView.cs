@@ -1,7 +1,5 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-//using Minsk.IO;
-
 namespace Ravel
 {
     internal abstract partial class Repl
@@ -78,6 +76,9 @@ namespace Ravel
                 {
                     Console.SetCursorPosition(0, Console.WindowHeight - 1);
                     Console.WriteLine();
+                    Console.Clear();
+                    _cursorTop = 0;
+                    Console.CursorTop = 0;
                     if (_cursorTop > 0)
                         _cursorTop--;
                 }

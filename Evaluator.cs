@@ -64,7 +64,7 @@ namespace Ravel
         private RavelObject EvaluateFunctionDefining(BoundFunctionDefiningExpression functionDefining)
         {
             RavelLambda function = new RavelLambda(functionDefining, Scope, Global);
-            return RavelObject.GetFunction(function, Global.TypePool);
+            return RavelObject.GetFunction(function);
         }
 
         private RavelObject EvaluateDot(BoundDotExpression dot)

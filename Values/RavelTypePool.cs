@@ -10,28 +10,34 @@ namespace Ravel.Values
     public class RavelTypePool
     {
         public Dictionary<string, RavelType> TypeMap { get; } = new();
-        public RavelTypePool()
+        public RavelTypePool(RavelScope systemScope)
         {
+            SystemScope = systemScope;
+
             ObjectType = new("object", this);
 
-            VoidType = new("void", this, ObjectType, GetRawObject);
+            VoidType = new("void", ObjectType);
 
-            IntType = new("int", this, ObjectType, GetRawObject);
+            IntType = new("int", ObjectType);
 
-            BoolType = new("bool", this, ObjectType, GetRawObject);
+            BoolType = new("bool", ObjectType);
 
-            StringType = new("string", this, ObjectType, GetRawObject);
+            StringType = new("string", ObjectType);
 
-            TypeType = new("type", this, ObjectType, GetRawObject);
+            TypeType = new("type", ObjectType);
 
-            BaseFuncType = new("func", this, ObjectType, 2, GetRawObject);//?
+            EnumerableType = new("enumerable", ObjectType);
 
-            BaseMaybeType = new("maybe", this, ObjectType, 1, GetRawObject);//?
+            var TTT = GetFuncType(TypeType, TypeType, TypeType);
+            FunctionConstructor = new(new RavelRealFunction(GetFunctionType, TTT, this, true), systemScope, "function");
+            //FunctionConstructor = new("func", this, ObjectType, 2, GetRawObject);//?
 
-            Unit = RavelObject.GetVoid(this);
+            //BaseMaybeType = new("maybe", this, ObjectType, 1);//?
+
+            //BaseListType = new("list", this, ObjectType, 1);
+
             True = RavelObject.GetBoolean(true, this);
             False = RavelObject.GetBoolean(false, this);
-            None = RavelObject.GetNone(this);
             RegistFunctions();
         }
 
@@ -50,7 +56,7 @@ namespace Ravel.Values
 
             });
             RavelType OS = GetFuncType(StringType, ObjectType);
-            ObjectType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ObjGetString, OS, this, true), this), "ToString", true, true, false, true);
+            ObjectType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ObjGetString, OS, this, true)), "ToString", true, true, true);
 
 
 
@@ -106,20 +112,31 @@ namespace Ravel.Values
             {
                 new(SyntaxKind.MinusLarge, RavelBinaryOperatorKind.Point, new RavelRealFunction(TypePoint, TTT, this, true))
             });
+            RavelType LS = GetFuncType(StringType, EnumerableType);//?
+            EnumerableType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ListToString, LS, this, true)), "ToString", true, true, true);
         }
-
+        private RavelObject GetFunctionType(RavelObject first, RavelObject second)
+        {
+            var f = first.GetValue<RavelType>();
+            var s = second.GetValue<RavelType>();
+            var func = new RavelType(FunctionConstructor, CallableType, new RavelType[] { f, s }, new());
+            return RavelObject.GetType(func);
+        }
         public RavelType VoidType { get; }
         public RavelType IntType { get; }
         public RavelType BoolType { get; }
         public RavelType StringType { get; }
         public RavelType TypeType { get; }
-        public RavelType BaseFuncType { get; }
-        public RavelType BaseMaybeType { get; }
+        public RavelConstructor FunctionConstructor { get; }
+        public RavelConstructor ListConstructor { get; }
+        public RavelType EnumerableType { get; }
+        public RavelType CallableType { get; }
         public RavelType ObjectType { get; }
         public RavelObject Unit { get; }
         public RavelObject True { get; }
         public RavelObject False { get; }
-        public RavelObject None { get; }
+        public RavelScope SystemScope { get; }
+
         public RavelObject GetRawObject(RavelType type, object? raw)
         {
             return new(raw!, type, this);
@@ -138,11 +155,11 @@ namespace Ravel.Values
                 }
                 else
                 {
-                    type = new(name, BaseFuncType, this, types[index], type);
+                    type = FunctionConstructor.GetRavelType(types[index], type);
                 }
                 if (index - 1 >= 0)
                 {
-                    name = $"{types[index - 1]}->{name}";
+                    name = $"{name} {types[index - 1]}";
                 }
             }
             return type;
@@ -288,5 +305,13 @@ namespace Ravel.Values
             return RavelObject.GetType(GetFuncType(r, l), this);
         }
 
+        internal RavelObject ListToString(RavelObject list)
+        {
+            StringBuilder builder = new();
+            builder.Append('[');
+            builder.AppendJoin(' ', list.GetValue<List<RavelObject>>());
+            builder.Append(']');
+            return RavelObject.GetString(builder.ToString(), this);
+        }
     }
 }

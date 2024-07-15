@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Ravel.Values
 {
-    public delegate RavelObject NewGive(RavelType type, object? obj);
+    public delegate RavelObject RawConstructor(object? raw);
     public class RavelType
     {
         public RavelTypePool TypePool { get; }
@@ -14,70 +14,48 @@ namespace Ravel.Values
         public List<RavelBinaryOperator> BinaryOperators { get; } = new();
         public List<RavelUnaryOperator> UnaryOperators { get; } = new();
         public RavelScope SonVariables { get; }
-        public RavelType? BaseType { get; }
-        public RavelType[] GenericTypes { get; }
-        public int GenericTypesCount { get; }
-        public bool IsCompleted { get; }
-        private NewGive NewGiver { get; }
 
-        internal RavelType(string name, RavelTypePool typePool)
+        public RavelConstructor? TypeConstructor { get; }
+        public RavelType[] GenericTypes { get; }
+
+        public RawConstructor? RawConstructor { get; set; }
+        public RavelType(string name, RavelTypePool typePool)
         {
             Name = name;
             TypePool = typePool;
             Parent = this;
             TypePool.TypeMap[Name] = this;
             GenericTypes = Array.Empty<RavelType>();
-            GenericTypesCount = 0;
-            IsCompleted = false;
-            NewGiver = null!;
             SonVariables = new();
         }
-        internal RavelType(string name, RavelType baseType, RavelTypePool typePool, params RavelType[] genericTypes)
+        public RavelType(string name, RavelType parent)
         {
             Name = name;
-            BaseType = baseType;
-            TypePool = typePool;
-            Parent = typePool.ObjectType;
+            TypePool = parent.TypePool;
+            Parent = parent.TypePool.ObjectType;
+            TypePool.TypeMap[Name] = this;
+            GenericTypes = Array.Empty<RavelType>();
+            SonVariables = new();
+        }
+        public RavelType(RavelConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
+        {
+            var name = GetTypeName(typeConstructor, genericTypes);
+            Name = name;
+            TypePool = parent.TypePool;
+            Parent = parent;
             TypePool.TypeMap[Name] = this;
             GenericTypes = genericTypes;
-            GenericTypesCount = genericTypes.Length;
-            IsCompleted = true;
-            NewGiver = baseType.NewGiver;
-            SonVariables = new(baseType.SonVariables);//?
+            SonVariables = temp_scope;
+            TypeConstructor = typeConstructor;
         }
 
-
-        internal RavelType(string name, RavelTypePool typePool, RavelType parent, int genericTypesCount, NewGive newGiver)
+        public static string GetTypeName(RavelConstructor typeConstructor, RavelType[] genericTypes)
         {
-            Name = name;
-            Parent = parent;
-            TypePool = typePool;
-            TypePool.TypeMap[Name] = this;
-            GenericTypes = Array.Empty<RavelType>();
-            GenericTypesCount = genericTypesCount;
-            IsCompleted = false;
-            NewGiver = newGiver;
-            SonVariables = new(parent.SonVariables);
-        }
-        internal RavelType(string name, RavelTypePool typePool, RavelType parent, NewGive newGiver)
-        {
-            Name = name;
-            Parent = parent;
-            TypePool = typePool;
-            GenericTypes = Array.Empty<RavelType>();
-            TypePool.TypeMap[Name] = this;
-            GenericTypesCount = 0;
-            IsCompleted = true;
-            NewGiver = newGiver;
-            SonVariables = new(parent.SonVariables);
-        }
-        public static string GetTypeName(RavelType baseType, RavelType[] genericTypes)
-        {
-            if (baseType.IsFunction)
-            {
-                return string.Join("->", genericTypes.Append(baseType));
-            }
-            return $"({baseType.Name} {string.Join(" ", genericTypes.Select(x => x.Name))})";
+            //if (typeGenerator.IsFunction)
+            //{
+            //    return string.Join("->", genericTypes.Append(typeGenerator));
+            //}
+            return $"({typeConstructor.Name} {string.Join(" ", genericTypes.Select(x => x.Name))})";
         }
         public bool IsSonOrEqual(RavelType other)
         {
@@ -134,27 +112,19 @@ namespace Ravel.Values
         {
             return SonVariables.TryGetVariable(name, out variable);
         }
-        public RavelObject NewObject(object? from = null)
+        public RavelObject RawObject(object? from = null)
         {
-            if (!IsCompleted)
-            {
-                throw new InvalidOperationException();
-            }
-            return NewGiver(this, from);
+            return RawConstructor == null ? throw new InvalidOperationException() : RawConstructor(from);
         }
-        public bool IsGenericFrom(RavelType baseType)
+        public bool IsGenericFrom(RavelConstructor constructor)
         {
-            return BaseType == baseType;
+            return TypeConstructor == constructor;
         }
         public bool IsFunction
         {
             get
             {
-                if (BaseType == null)
-                {
-                    return false;
-                }
-                return BaseType.IsSonOrEqual(TypePool.BaseFuncType);
+                return TypeConstructor == TypePool.FunctionConstructor || (Parent != this && Parent.IsFunction);
             }
         }
 

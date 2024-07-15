@@ -11,14 +11,13 @@
         {
         }
         public RavelRealFunction(Delegate func, RavelType type, RavelTypePool typePool, bool isConst)
-            : base(type, typePool, func.Method.GetParameters().Length)
+            : base(type, type.TypePool, func.Method.GetParameters().Length)
         {
             Func = func;
-            IsConst= isConst;
+            IsConst = isConst;
         }
 
         public override bool IsConst { get; }
-
         private Delegate Func { get; }
 
         protected override RavelObject InvokeMust(RavelObject[] obj)

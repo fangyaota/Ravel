@@ -363,7 +363,7 @@ namespace Ravel.Syntax
             {
                 int start = _position;
                 _position += offset;
-                return new LiteralExpressionSyntax(new(SyntaxKind.None, start, "()", Global.TypePool.None));
+                return new LiteralExpressionSyntax(new(SyntaxKind.None, start, "()", Global.TypePool.Unit));
             }
             if (Peek(offset).Kind is SyntaxKind.EqualLarge or SyntaxKind.MinusLarge)
             {

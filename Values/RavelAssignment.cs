@@ -10,15 +10,13 @@
 
         public bool IsConst { get; }
 
-        public bool IsDynamic { get; }
 
-        public RavelDefining(RavelType type, string name, bool isReadOnly, bool isConst, bool isDynamic = false)
+        public RavelDefining(RavelType type, string name, bool isReadOnly, bool isConst)
         {
             Type = type;
             Name = name;
             IsReadOnly = isReadOnly;
             IsConst = isConst;
-            IsDynamic = isDynamic;
         }
     }
 }

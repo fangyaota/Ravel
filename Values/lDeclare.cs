@@ -6,6 +6,5 @@
         public string Name { get; }
         public bool IsReadOnly { get; }
         public bool IsConst { get; }
-        public bool IsDynamic { get; }
     }
 }

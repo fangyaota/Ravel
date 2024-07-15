@@ -31,21 +31,17 @@ namespace Ravel.Values
         {
             return new RavelObject(str, typePool.StringType, typePool);
         }
-        public static RavelObject GetFunction(RavelFunction value, RavelTypePool typePool)
+        public static RavelObject GetFunction(RavelFunction value)
         {
-            return new(value, value.Type, typePool);//?
+            return new(value, value.Type, value.TypePool);//?
         }
-        public static RavelObject GetType(RavelType type, RavelTypePool typePool)
+        public static RavelObject GetType(RavelType type)
         {
-            return new(type, typePool.TypeType, typePool);
+            return new(type, type.TypePool.TypeType, type.TypePool);
         }
         public static RavelObject GetRawObject(object obj, RavelTypePool typePool)
         {
             return new(obj, typePool.GetMappedType(obj.GetType()), typePool);
-        }
-        public static RavelObject GetNone(RavelTypePool typePool)
-        {
-            return new(null!, typePool.BaseMaybeType, typePool);
         }
         public T GetValue<T>()
         {
@@ -90,13 +86,6 @@ namespace Ravel.Values
             {
                 return "{}";
             }
-            if (Type.IsSonOrEqual(TypePool.BaseMaybeType))
-            {
-                if (Value == null)
-                {
-                    return "()";
-                }
-            }
             if (Type == TypePool.IntType)
             {
                 return Value.ToString()!;
@@ -133,11 +122,7 @@ namespace Ravel.Values
         }
         public RavelObject Call(params RavelObject[] obj)
         {
-            if (Type.IsSonOrEqual(TypePool.BaseFuncType))
-            {
-                throw new InvalidCastException();
-            }
-            return ((RavelFunction)Value).Invoke(obj);
+            return !Type.IsFunction ? throw new InvalidCastException() : GetValue<RavelFunction>().Invoke(obj);
         }
         public bool TryCallFunction(string funcName, out RavelObject result, params RavelObject[] obj)
         {

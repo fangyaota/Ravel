@@ -384,6 +384,10 @@ namespace Ravel.Binding
         {
             string name = syntax.Declare.Identifier.Text;
             BoundExpression expression = BindExpression(syntax.Expression);
+            if(expression is BoundErrorExpression)
+            {
+                return expression;
+            }
             if (syntax.Declare.Type == null)
             {
                 RavelDefining define = new RavelDefining(expression.Type, name, false, false);
