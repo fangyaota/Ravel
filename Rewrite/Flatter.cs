@@ -69,7 +69,7 @@ namespace Ravel.Rewrite
         {
             if (expression.IsConst)
             {
-                var obj = new Evaluator(expression, Global).Evaluate();
+                var obj = new NeoEvaluator(expression, Global).Evaluate();
                 result = new BoundLiteralExpression(obj);
                 return true;
             }

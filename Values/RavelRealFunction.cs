@@ -20,9 +20,13 @@
         public override bool IsConst { get; }
         private Delegate Func { get; }
 
-        protected override RavelObject InvokeMust(RavelObject[] obj)
+        protected override void InvokeMust(NeoEvaluator evaluator, RavelObject[] objs)
         {
-            return (RavelObject)Func.DynamicInvoke(obj.Cast<object>().ToArray())!;
+            evaluator.CurrentCallStack.SonResults.Add(Invoke(objs));
+        }
+        public RavelObject Invoke(params RavelObject[] objs)
+        {
+            return (RavelObject)Func.DynamicInvoke(objs.Cast<object>().ToArray())!;
         }
     }
 }

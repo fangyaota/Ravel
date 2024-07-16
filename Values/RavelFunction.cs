@@ -1,4 +1,6 @@
-﻿namespace Ravel.Values
+﻿using Ravel.Binding;
+
+namespace Ravel.Values
 {
     public abstract class RavelFunction
     {
@@ -16,20 +18,26 @@
             ResultType = type.GetTypeWhenCall(realParameterCount);
         }
 
-        public RavelObject Invoke(params RavelObject[] obj)
+        public void Invoke(NeoEvaluator evaluator, params RavelObject[] obj)
         {
             if (obj.Length < RealParameters.Length)
             {
                 RavelType newType = TypePool.GetFuncType(ResultType, RealParameters[obj.Length..]);
-                return RavelObject.GetFunction(new RavelParcialFunction(this, obj, newType));
+                evaluator.AddResultAndReturn(RavelObject.GetFunction(new RavelParcialFunction(this, obj, newType)));
+                return;
             }
             if (obj.Length == RealParameters.Length)
             {
-                return InvokeMust(obj);
+                InvokeMust(evaluator, obj);
+                return;
             }
-            RavelObject ret = InvokeMust(obj[..RealParameters.Length]);
-            return ret.Call(obj[RealParameters.Length..]);
+            var functionExp = new BoundLiteralExpression(RavelObject.GetFunction(this));
+            var formerParamExp = obj[..RealParameters.Length].Select(x => (BoundExpression)new BoundLiteralExpression(x)).ToList();
+            var latterParamExp = obj[RealParameters.Length..].Select(x => (BoundExpression)new BoundLiteralExpression(x)).ToList();
+            var expression = new BoundFunctionCallExpression(new BoundFunctionCallExpression(functionExp, formerParamExp), latterParamExp);
+
+            evaluator.CurrentCallStack = new(evaluator.CurrentCallStack, expression);
         }
-        protected abstract RavelObject InvokeMust(RavelObject[] obj);
+        protected abstract void InvokeMust(NeoEvaluator evaluator, RavelObject[] obj);
     }
 }

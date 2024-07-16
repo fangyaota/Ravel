@@ -154,8 +154,8 @@ namespace Ravel.Values
         public RavelType BoolType { get; }
         public RavelType StringType { get; }
         public RavelType TypeType { get; }
-        public RavelConstructor FunctionConstructor { get; }
-        public RavelConstructor ListConstructor { get; }
+        public RavelRealConstructor FunctionConstructor { get; }
+        public RavelRealConstructor ListConstructor { get; }
         public RavelType EnumerableType { get; }
         public RavelType CallableType { get; }
         public RavelType ObjectType { get; }
@@ -346,7 +346,7 @@ namespace Ravel.Values
         {
             var f = first.GetValue<RavelType>();
             var s = second.GetValue<RavelType>();
-            RavelType func = GetFuncType(f, s);
+            RavelType func = GetFuncType(s, f);
             return RavelObject.GetType(func);
         }
         internal RavelObject ListToString(RavelObject list)

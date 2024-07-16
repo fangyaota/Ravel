@@ -52,6 +52,6 @@ namespace Ravel
         public Lexer Lexer { get; }
         public Parser Parser { get; }
         public Binder Binder { get; }
-        public Evaluator Evaluator { get; }
+        public NeoEvaluator Evaluator { get; }
     }
 }

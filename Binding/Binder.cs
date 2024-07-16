@@ -232,7 +232,7 @@ namespace Ravel.Binding
 
             
 
-            RavelObject result = new Evaluator(type, Global).Evaluate();//?
+            RavelObject result = new NeoEvaluator(type, Global).Evaluate();//?
 
             ravelType = result.GetValue<RavelType>();
             if (matchType == null)

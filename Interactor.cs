@@ -197,7 +197,7 @@ internal class Interactor : Repl
 
     protected override void EvaluateSubmission(string text)
     {
-        compiler = new Compiler(text, Global, compiler?.Evaluator.Scope);
+        compiler = new Compiler(text, Global, compiler?.Evaluator.CurrentCallStack.Scope);
         if (compiler.Diagnostics.Any())
         {
             foreach(var diagnostic in compiler.Diagnostics)

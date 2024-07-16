@@ -3,184 +3,352 @@ using Ravel.Values;
 
 namespace Ravel
 {
-    public class Evaluator
+
+    public class NeoEvaluator
     {
         public BoundExpression Root { get; }
         public RavelGlobal Global { get; }
-        public RavelScope Scope { get; private set; }
 
-        public Evaluator(BoundProgram root, RavelGlobal global, RavelScope? scope = null)
+        public RavelCallStack CurrentCallStack { get; internal set; }
+
+        public bool CalculateDone { get; private set; }
+        public RavelObject Result { get; private set; }
+
+        public NeoEvaluator(BoundProgram root, RavelGlobal global, RavelScope? scope = null)
         {
             Root = root.Expression;
             Global = global;
-            Scope = scope ?? new(Global.Variables);
+            var s = scope ?? new(Global.Variables);
+            CurrentCallStack = new(s, root.Expression);
         }
-        internal Evaluator(BoundExpression root, RavelGlobal global, RavelScope? scope = null)
+        internal NeoEvaluator(BoundExpression root, RavelGlobal global, RavelScope? scope = null)
         {
-            Root = root;
+            Root= root;
             Global = global;
-            Scope = scope ?? new(Global.Variables);
+            var s = scope ?? new(Global.Variables);
+            CurrentCallStack = new(s, root);
         }
         public RavelObject Evaluate()
         {
-            return EvaluateExpression(Root);
-        }
-        internal RavelObject EvaluateExpression(BoundExpression root)
-        {
-            return root switch
+            while(!CalculateDone)
             {
-                BoundLiteralExpression literal => EvaluateLiteral(literal),
-                BoundAssignmentExpression assignment => EvaluateAssignment(assignment),
-                BoundDefiningExpression Defining => EvaluateDefining(Defining),
-                BoundVariableExpression variable => EvaluateVariable(variable),
-                BoundUnaryExpression unary => EvaluateUnary(unary),
-                BoundBinaryExpression binary => EvaluateBinary(binary),
-                BoundFunctionCallExpression call => EvaluateFunctionCall(call),
-                BoundBlockExpression block => EvaluateBlock(block),
-                BoundDotExpression dot => EvaluateDot(dot),
-                BoundFunctionDefiningExpression functionDefining => EvaluateFunctionDefining(functionDefining),
-                BoundIfExpression @if => EvaluateIf(@if),
-                BoundWhileExpression @while => EvaluateWhile(@while),
-                _ => throw new InvalidOperationException($"Unexpected node '{root.Kind}'"),
-            };
-        }
-
-        private RavelObject EvaluateWhile(BoundWhileExpression @while)
-        {
-            RavelObject last = Global.TypePool.Unit;
-            while (EvaluateExpression(@while.Condition).GetValue<bool>())
-            {
-                last = EvaluateExpression(@while.Expression);
+                Step();
             }
-            return last;
+            return Result;
         }
-
-        private RavelObject EvaluateIf(BoundIfExpression @if)
+        internal void Step()
         {
-            RavelObject condition = EvaluateExpression(@if.Condition);
-            return condition.GetValue<bool>() ? EvaluateExpression(@if.ExpTrue) : EvaluateExpression(@if.ExpFalse);
-        }
-
-        private RavelObject EvaluateFunctionDefining(BoundFunctionDefiningExpression functionDefining)
-        {
-            RavelLambda function = new RavelLambda(functionDefining, Scope, Global);
-            return RavelObject.GetFunction(function);
-        }
-
-        private RavelObject EvaluateDot(BoundDotExpression dot)
-        {
-            RavelObject owner = EvaluateExpression(dot.Owner);
-            if (!owner.TryGetSonValue(dot.Son, out RavelObject obj))
+            switch (CurrentCallStack.Expression)
             {
-                throw new InvalidOperationException(dot.Son);
+                case BoundLiteralExpression literal:
+                    EvaluateLiteral(literal);
+                    break;
+                case BoundAssignmentExpression assignment:
+                    EvaluateAssignment(assignment);
+                    break;
+                case BoundDefiningExpression defining:
+                    EvaluateDefining(defining);
+                    break;
+                case BoundVariableExpression variable:
+                    EvaluateVariable(variable);
+                    break;
+                case BoundUnaryExpression unary:
+                    EvaluateUnary(unary);
+                    break;
+                case BoundBinaryExpression binary:
+                    EvaluateBinary(binary);
+                    break;
+                case BoundFunctionCallExpression call:
+                    EvaluateFunctionCall(call);
+                    break;
+                case BoundBlockExpression block:
+                    EvaluateBlock(block);
+                    break;
+                case BoundDotExpression dot:
+                    EvaluateDot(dot);
+                    break;
+                case BoundFunctionDefiningExpression functionDefining:
+                    EvaluateFunctionDefining(functionDefining);
+                    break;
+                case BoundIfExpression @if:
+                    EvaluateIf(@if);
+                    break;
+                case BoundWhileExpression @while:
+                    EvaluateWhile(@while);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unexpected node '{CurrentCallStack.Expression.Kind}'");
             }
-            return obj;
         }
-
-        private RavelObject EvaluateAssignment(BoundAssignmentExpression assignment)
+        internal void AddResultAndReturn(RavelObject result)
         {
-            RavelObject exp = EvaluateExpression(assignment.Expression);
-            if (!Scope.TryGetVariable(assignment.Name, out RavelVariable? value))
+            if (CurrentCallStack.Parent != null)
             {
-                throw new InvalidOperationException();
+                CurrentCallStack.Parent.SonResults.Add(result);
+                CurrentCallStack = CurrentCallStack.Parent;
             }
-            if (value.IsReadOnly)
+            else
             {
-                throw new InvalidOperationException();
+                CalculateDone = true;
+                Result = result;
             }
-            value.Object = exp;
-            return exp;
         }
-
-        private RavelObject EvaluateBlock(BoundBlockExpression block)
+        private void EvaluateWhile(BoundWhileExpression @while)
         {
-            RavelScope s = Scope;
-            Scope = new(Scope);
-            RavelObject result = Global.TypePool.Unit;
-            foreach (BoundExpression e in block.Expressions)
+            switch(CurrentCallStack.SonResults.Count)
             {
-                result = EvaluateExpression(e);
-            }
-            Scope = s;
-            return result;
-        }
-
-        private RavelObject EvaluateFunctionCall(BoundFunctionCallExpression call)
-        {
-            RavelObject func = EvaluateExpression(call.Function);
-            RavelObject[] parameters = call.Parameters.Select(p => EvaluateExpression(p)).ToArray();
-            return func.Call(parameters);
-        }
-
-        private RavelObject EvaluateBinary(BoundBinaryExpression binary)
-        {
-            RavelObject left = EvaluateExpression(binary.Left);
-            RavelObject right;
-            switch (binary.Op.Kind)
-            {
-                case RavelBinaryOperatorKind.ShortCutAnd:
+                case 0:
+                    CurrentCallStack.Scope = new(CurrentCallStack.Scope);
+                    CurrentCallStack = new(CurrentCallStack, @while.Condition);
+                    break;
+                case 1:
+                    if (CurrentCallStack.SonResults[0].GetValue<bool>())
                     {
-                        if (!left.GetValue<bool>())
-                        {
-                            return Global.TypePool.False;
-                        }
-                        right = EvaluateExpression(binary.Right);
-                        return right.GetValue<bool>() ? Global.TypePool.True : Global.TypePool.False;
+                        RavelScope son = new(CurrentCallStack.Scope);
+                        CurrentCallStack = new(CurrentCallStack, @while.Expression);
+                        CurrentCallStack.SonResults.Clear();
                     }
-                case RavelBinaryOperatorKind.ShortCutOr:
+                    else
                     {
-                        if (left.GetValue<bool>())
-                        {
-                            return Global.TypePool.True;
-                        }
-                        right = EvaluateExpression(binary.Right);
-                        return right.GetValue<bool>() ? Global.TypePool.True : Global.TypePool.False;
+                        AddResultAndReturn(Global.TypePool.Unit);
                     }
+                    break;
             }
-            right = EvaluateExpression(binary.Right);
-            RavelObject l = binary.Op.Function.Invoke(left, right);
-            return l;
-            throw new InvalidOperationException($"Unexpected binary operator '{binary.Op}'");
         }
 
-        private RavelObject EvaluateUnary(BoundUnaryExpression unary)
+        private void EvaluateIf(BoundIfExpression @if)
         {
-            RavelObject operand = EvaluateExpression(unary.Operand);
-            RavelUnaryOperator? op = unary.Operand.Type.GetOperator(unary.Op.SyntaxKind);
-            if (op == null)
+            switch (CurrentCallStack.SonResults.Count)
             {
-                throw new InvalidOperationException($"Unexpected unary operator '{unary.Op}'");
+                case 0:
+                    CurrentCallStack = new(CurrentCallStack, @if.Condition);
+                    break;
+                case 1:
+                    CurrentCallStack.Scope = new(CurrentCallStack.Scope);
+                    bool b = CurrentCallStack.SonResults[0].GetValue<bool>();
+                    CurrentCallStack = new(CurrentCallStack, b ? @if.ExpTrue : @if.ExpFalse);
+                    break;
+                case 2:
+                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    break;
             }
-            return op.Function.Invoke(operand);
         }
 
-        private RavelObject EvaluateVariable(BoundVariableExpression variable)
+        private void EvaluateFunctionDefining(BoundFunctionDefiningExpression functionDefining)
         {
-            if (Scope.TryGetVariable(variable.Name, out RavelVariable? value))
+            RavelLambda function = new(functionDefining, CurrentCallStack.Scope, Global);
+            AddResultAndReturn(RavelObject.GetFunction(function));//?
+        }
+
+        private void EvaluateDot(BoundDotExpression dot)
+        {
+            switch (CurrentCallStack.SonResults.Count)
             {
-                var obj= value!.Object;
-                if(value.IsFunctionSelf)
+                case 0:
+                    CurrentCallStack = new(CurrentCallStack, dot.Owner);
+                    break;
+                case 1:
+                    var owner = CurrentCallStack.SonResults[0];
+                    if (!owner.TryReturnSonValue(this, dot.Son))
+                    {
+                        throw new InvalidOperationException(dot.Son);
+                    }
+                    break;
+                case 2:
+                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    break;
+            }
+        }
+
+        private void EvaluateAssignment(BoundAssignmentExpression assignment)
+        {
+            switch (CurrentCallStack.SonResults.Count)
+            {
+                case 0:
+                    CurrentCallStack = new(CurrentCallStack, assignment.Expression);
+                    break;
+                case 1:
+                    RavelScope scope = CurrentCallStack.Scope;
+                    if (!scope.TryGetVariable(assignment.Name, out RavelVariable value))
+                    {
+                        throw new InvalidOperationException();
+                    }
+                    if (value.IsReadOnly)
+                    {
+                        throw new InvalidOperationException();
+                    }
+                    value.Object = CurrentCallStack.SonResults[0];
+                    AddResultAndReturn(CurrentCallStack.SonResults[0]);
+                    break;
+            }
+        }
+
+        private void EvaluateBlock(BoundBlockExpression block)
+        {
+            int resultCount = CurrentCallStack.SonResults.Count;
+            if(resultCount == 0)
+            {
+                CurrentCallStack.Scope = new(CurrentCallStack.Scope);
+            }
+            if (resultCount < block.Expressions.Count)
+            {
+                CurrentCallStack = new(CurrentCallStack, block.Expressions.Last());
+            }
+            else
+            {
+                AddResultAndReturn(CurrentCallStack.SonResults.Last());
+            }
+        }
+
+        private void EvaluateFunctionCall(BoundFunctionCallExpression call)
+        {
+            int resultCount = CurrentCallStack.SonResults.Count;
+            if (resultCount == 0)
+            {
+                CurrentCallStack = new(CurrentCallStack, call.Function);
+            }else if(resultCount < call.Parameters.Count + 1)
+            {
+                CurrentCallStack = new(CurrentCallStack, call.Parameters[resultCount - 1]);
+            }
+            else if(resultCount == call.Parameters.Count + 1)
+            {
+                var func = CurrentCallStack.SonResults[0];
+                func.Call(this, CurrentCallStack.SonResults.ToArray()[1..]);
+            }
+            else
+            {
+                AddResultAndReturn(CurrentCallStack.SonResults.Last());
+            }
+        }
+
+        private void EvaluateBinary(BoundBinaryExpression binary)
+        {
+            switch (CurrentCallStack.SonResults.Count)
+            {
+                case 0:
+                    CurrentCallStack = new(CurrentCallStack, binary.Left);
+                    break;
+                case 1:
+                    var left = CurrentCallStack.SonResults[0];
+                    switch (binary.Op.Kind)
+                    {
+                        case RavelBinaryOperatorKind.ShortCutAnd:
+                            {
+                                if (!left.GetValue<bool>())
+                                {
+                                    AddResultAndReturn(Global.TypePool.False);
+                                    return;
+                                }
+                            }
+                            break;
+                        case RavelBinaryOperatorKind.ShortCutOr:
+                            {
+                                if (left.GetValue<bool>())
+                                {
+                                    AddResultAndReturn(Global.TypePool.True);
+                                    return;
+                                }
+                            }
+                            break;
+                    }
+                    CurrentCallStack = new(CurrentCallStack, binary.Right);
+                    break;
+                case 2:
+                    binary.Op.Function.Invoke(this, CurrentCallStack.SonResults[0], CurrentCallStack.SonResults[1]);
+                    break;
+                case 3:
+                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    break;
+            }
+        }
+
+        private void EvaluateUnary(BoundUnaryExpression unary)
+        {
+            switch (CurrentCallStack.SonResults.Count)
+            {
+                case 0:
+                    CurrentCallStack = new(CurrentCallStack, unary.Operand);
+                    break;
+                case 1:
+                    unary.Op.Function.Invoke(this, CurrentCallStack.SonResults[0]);
+                    break;
+                case 2:
+                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    break;
+            }
+        }
+
+        private void EvaluateVariable(BoundVariableExpression variable)
+        {
+            if (CurrentCallStack.Scope.TryGetVariable(variable.Name, out RavelVariable? value))
+            {
+                var obj = value!.Object;
+                if (value.IsFunctionSelf)
                 {
-                    obj = obj.Call(Global.TypePool.Unit);
+                    switch (CurrentCallStack.SonResults.Count)
+                    {
+                        case 0:
+                            obj.Call(this, Global.TypePool.Unit);
+                            break;
+                        case 1:
+                            AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                            break;
+                    }
                 }
-                return obj;
+                else
+                {
+                    AddResultAndReturn(obj);
+                }
             }
-            throw new NotSupportedException();
-        }
-
-        private RavelObject EvaluateDefining(BoundDefiningExpression Defining)
-        {
-            RavelObject exp = EvaluateExpression(Defining.Expression);
-            if (!Scope.TryDeclare(Defining.Declare.Name, exp, false, false))
+            else
             {
-                throw new InvalidOperationException();
+                throw new NotSupportedException();
             }
-            return exp;
         }
 
-        private static RavelObject EvaluateLiteral(BoundLiteralExpression num)
+        private void EvaluateDefining(BoundDefiningExpression defining)
         {
-            return num.Value;
+            switch (CurrentCallStack.SonResults.Count)
+            {
+                case 0:
+                    CurrentCallStack = new(CurrentCallStack, defining.Expression);
+                    break;
+                case 1:
+                    if (!CurrentCallStack.Scope.TryDeclare(defining.Declare.Name, CurrentCallStack.SonResults.Last(), false, false))
+                    {
+                        throw new InvalidOperationException();
+                    }
+                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    break;
+            }
         }
+
+        private void EvaluateLiteral(BoundLiteralExpression num)
+        {
+            AddResultAndReturn(num.Value);
+        }
+    }
+    public class RavelCallStack
+    {
+        public RavelCallStack(RavelCallStack? parent, BoundExpression expression)
+        {
+            Parent = parent;
+            LastFunctionCall = parent?.LastFunctionCall;
+            Expression = expression;
+            Scope = parent?.Scope ?? new();
+        }
+        public RavelCallStack(RavelScope scope, BoundExpression expression)
+        {
+            Parent = null;
+            LastFunctionCall = null;
+            Expression = expression;
+            Scope = scope;
+        }
+        public RavelCallStack? Parent { get; }
+        public RavelCallStack? LastFunctionCall { get; internal set; }
+        public BoundExpression Expression { get; }
+        public RavelScope Scope { get; internal set; }
+
+        public List<RavelObject> SonResults { get; } = new();
     }
 }

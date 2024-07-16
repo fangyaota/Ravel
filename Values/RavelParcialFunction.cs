@@ -14,9 +14,9 @@
         private RavelFunction RavelFunction { get; }
         private RavelObject[] Objs { get; }
 
-        protected override RavelObject InvokeMust(RavelObject[] obj)
+        protected override void InvokeMust(NeoEvaluator evaluator, RavelObject[] obj)
         {
-            return RavelFunction.Invoke(Objs.Concat(obj).ToArray());
+            RavelFunction.Invoke(evaluator, Objs.Concat(obj).ToArray());
         }
     }
 }

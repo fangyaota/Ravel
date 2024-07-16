@@ -15,7 +15,7 @@ namespace Ravel.Values
         public List<RavelUnaryOperator> UnaryOperators { get; } = new();
         public RavelScope SonVariables { get; }
 
-        public RavelConstructor? TypeConstructor { get; }
+        public RavelRealConstructor? TypeConstructor { get; }
         public RavelType[] GenericTypes { get; }
 
         public RawConstructor? RawConstructor { get; set; }
@@ -37,7 +37,7 @@ namespace Ravel.Values
             GenericTypes = Array.Empty<RavelType>();
             SonVariables = new(parent.SonVariables);
         }
-        public RavelType(RavelConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
+        public RavelType(RavelRealConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
         {
             var name = typeConstructor.GetSpecificName(genericTypes);
             Name = name;
@@ -103,7 +103,7 @@ namespace Ravel.Values
         {
             return RawConstructor == null ? throw new InvalidOperationException() : RawConstructor(from);
         }
-        public bool IsGenericFrom(RavelConstructor constructor)
+        public bool IsGenericFrom(RavelRealConstructor constructor)
         {
             return TypeConstructor == constructor;
         }

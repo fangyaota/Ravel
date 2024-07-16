@@ -51,23 +51,22 @@ namespace Ravel.Values
             }
             throw new InvalidCastException($"cast from {Type} to {typeof(T).Name}");
         }
-        public bool TryGetSonValue(string name, out RavelObject obj)
+        public bool TryReturnSonValue(NeoEvaluator evaluator, string name)
         {
             
             if (SonValues.TryGetValue(name, out RavelObject value))
             {
-                obj = value;
+                evaluator.CurrentCallStack.SonResults.Add(value);
                 return true;
             }
             if (!Type.TryGetSonVariable(name, out RavelVariable? variable))
             {
-                obj = TypePool.Unit;
                 return false;
             }
-            obj = variable!.Object;
+            var obj = variable!.Object;
             if (variable!.IsFunctionSelf)
             {
-                obj = obj.Call(this);
+                obj.Call(evaluator, this);
             }
             return true;
         }
@@ -120,19 +119,16 @@ namespace Ravel.Values
         {
             return !(left == right);
         }
-        public RavelObject Call(params RavelObject[] obj)
+        public void Call(NeoEvaluator evaluator, params RavelObject[] obj)
         {
-            return !Type.IsFunction ? throw new InvalidCastException() : GetValue<RavelFunction>().Invoke(obj);
-        }
-        public bool TryCallFunction(string funcName, out RavelObject result, params RavelObject[] obj)
-        {
-            if (TryGetSonValue(funcName, out RavelObject function))
+            if (!Type.IsFunction)
             {
-                result = function.Call(obj);
-                return true;
+                throw new InvalidCastException();
             }
-            result = TypePool.Unit;
-            return false;
+            else
+            {
+                GetValue<RavelFunction>().Invoke(evaluator, obj);
+            }
         }
         public override bool Equals(object? obj)
         {
