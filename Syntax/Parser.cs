@@ -64,20 +64,25 @@ namespace Ravel.Syntax
         }
         private SyntaxToken MatchToken(params SyntaxKind[] kinds)
         {
+            bool temp = false;
+            return MatchToken(ref temp, kinds);
+        }
+        private SyntaxToken MatchToken(ref bool alreadyError, params SyntaxKind[] kinds)
+        {
             if (kinds.Contains(Current.Kind))
             {
                 return NextToken();
             }
             if (Current.Kind != SyntaxKind.BadToken)
             {
-                if (_position < Tokens.Count)
+                if (_position < Tokens.Count && !alreadyError)
                 {
                     _diagnostics.ReportMissingToken(Current.Span, Current, kinds.First());
+                    alreadyError = true;
                 }
             }
             return new(kinds.First(), _position++, "", default!);
         }
-
         public SyntaxTree Parse()
         {
             CompilationUnitSyntax unit = ParseCompilationUnit();
@@ -222,8 +227,9 @@ namespace Ravel.Syntax
         }
         private DeclareExpressionSyntax ParseDeclare(bool mustHaveType = false)
         {
-            SyntaxToken variable = MatchToken(SyntaxKind.Variable);
-            SyntaxToken colon = MatchToken(SyntaxKind.Colon);
+            bool haserror = false;
+            SyntaxToken variable = MatchToken(ref haserror, SyntaxKind.Variable);
+            SyntaxToken colon = MatchToken(ref haserror, SyntaxKind.Colon);
             List<SyntaxToken> tokens = new();
             while (Current.Kind.IsVariableKeyword())
             {
@@ -234,7 +240,7 @@ namespace Ravel.Syntax
                 var expr = ParseSingleton();
                 return new DeclareExpressionSyntax(variable, colon, tokens, expr);
             }
-            if(mustHaveType)
+            if(mustHaveType && !haserror)
             {
                 _diagnostics.ReportFunctionParameterNoType(variable);
             }
@@ -385,7 +391,8 @@ namespace Ravel.Syntax
                 DeclareExpressionSyntax declare = ParseDeclare(true);
                 paramList.Add(declare);
             }
-            SyntaxToken right = MatchToken(SyntaxKind.CloseHesis);
+            bool hasError = false;
+            SyntaxToken right = MatchToken(ref hasError, SyntaxKind.CloseHesis);
             if (paramList.Count == 0)
             {
                 _diagnostics.ReportFunctionNoParameters(right.Span);
@@ -394,10 +401,10 @@ namespace Ravel.Syntax
             SyntaxToken? typeIdentifier = null;
             if (Current.Kind is SyntaxKind.MinusLarge)
             {
-                minusLarge = MatchToken(SyntaxKind.MinusLarge);
-                typeIdentifier = MatchToken(SyntaxKind.Variable);
+                minusLarge = MatchToken(ref hasError, SyntaxKind.MinusLarge);
+                typeIdentifier = MatchToken(ref hasError, SyntaxKind.Variable);
             }
-            SyntaxToken equalLarge = MatchToken(SyntaxKind.EqualLarge);
+            SyntaxToken equalLarge = MatchToken(ref hasError, SyntaxKind.EqualLarge);
             ExpressionSyntax sentence = ParseSentence();
             return new FunctionDefiningExpressionSyntax(left, paramList, right, minusLarge, typeIdentifier, equalLarge, sentence);
         }
