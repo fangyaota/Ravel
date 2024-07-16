@@ -5,7 +5,7 @@ namespace Ravel.Values
     internal class RavelLambda : RavelFunction
     {
         public RavelLambda(BoundFunctionDefiningExpression expression, RavelScope scope, RavelGlobal global)
-            : base(expression.Type, global.TypePool, expression.Parameters.Count)
+            : base(expression.Type, expression.Parameters.Count)
         {
             Expression = expression;
             Scope = scope;
@@ -25,7 +25,7 @@ namespace Ravel.Values
             {
                 sco.TryDeclare(Expression.Parameters[i].Name, obj[i], false, false);
             }
-            sco.TryDeclare("self", RavelObject.GetFunction(this, TypePool), true, false);
+            sco.TryDeclare("self", RavelObject.GetFunction(this), true, false);
             Evaluator evaluator = new Evaluator(Expression.Sentence, Global, sco);
             RavelObject result = evaluator.EvaluateExpression(Expression.Sentence);
             return result;

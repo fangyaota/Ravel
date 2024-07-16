@@ -10,11 +10,16 @@ namespace Ravel.Values
     public class RavelTypePool
     {
         public Dictionary<string, RavelType> TypeMap { get; } = new();
-        public RavelTypePool(RavelScope systemScope)
+        public RavelTypePool()
         {
-            SystemScope = systemScope;
+            SystemScope = new()
+            {
+
+            };
 
             ObjectType = new("object", this);
+
+            TypeType = new("type", ObjectType);
 
             VoidType = new("void", ObjectType);
 
@@ -24,21 +29,30 @@ namespace Ravel.Values
 
             StringType = new("string", ObjectType);
 
-            TypeType = new("type", ObjectType);
 
             EnumerableType = new("enumerable", ObjectType);
 
+            CallableType = new("callable", ObjectType);
+
+            FunctionConstructor = new(null!, SystemScope, "function");
+
             var TTT = GetFuncType(TypeType, TypeType, TypeType);
-            FunctionConstructor = new(new RavelRealFunction(GetFunctionType, TTT, this, true), systemScope, "function");
-            //FunctionConstructor = new("func", this, ObjectType, 2, GetRawObject);//?
+            var TT = GetFuncType(TypeType, TypeType);
 
-            //BaseMaybeType = new("maybe", this, ObjectType, 1);//?
+            FunctionConstructor.Function = new RavelRealFunction(GetFunctionType, TTT, true);
 
-            //BaseListType = new("list", this, ObjectType, 1);
-
+            ListConstructor = new(new RavelRealFunction(GetListType, TT, true), SystemScope, "list");
             True = RavelObject.GetBoolean(true, this);
             False = RavelObject.GetBoolean(false, this);
             RegistFunctions();
+
+            SystemScope["int"] = new(RavelObject.GetType(IntType), "int", true, true);
+            SystemScope["bool"] = new(RavelObject.GetType(BoolType), "bool", true, true);
+            SystemScope["string"] = new(RavelObject.GetType(StringType), "string", true, true);
+            SystemScope["type"] = new(RavelObject.GetType(TypeType), "type", true, true);
+            SystemScope["object"] = new(RavelObject.GetType(ObjectType), "object", true, true);
+            SystemScope["void"] = new(RavelObject.GetType(VoidType), "void", true, true);
+
         }
 
         private void RegistFunctions()
@@ -47,16 +61,16 @@ namespace Ravel.Values
 
             RavelType OSS = GetFuncType(StringType, ObjectType, StringType);
 
-            RavelRealFunction objectIs = new(ObjectIs, OTB, this, true);
+            RavelRealFunction objectIs = new(ObjectIs, OTB, true);
 
             ObjectType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
                 new (SyntaxKind.Is, RavelBinaryOperatorKind.TypeIs, objectIs),
-                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(StringAdd, OSS, this, true))
+                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(StringAdd, OSS, true))
 
             });
             RavelType OS = GetFuncType(StringType, ObjectType);
-            ObjectType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ObjGetString, OS, this, true)), "ToString", true, true, true);
+            ObjectType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ObjGetString, OS, true)), "ToString", true, true, true);
 
 
 
@@ -64,62 +78,74 @@ namespace Ravel.Values
             RavelType IIB = GetFuncType(BoolType, IntType, IntType);
             IntType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
-                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(IntAdd, III, this, true)),
-                new(SyntaxKind.Minus, RavelBinaryOperatorKind.Subtraction, new RavelRealFunction(IntSub, III, this, true)),
-                new(SyntaxKind.Star, RavelBinaryOperatorKind.Multiplication, new RavelRealFunction(IntMul, III, this, true)),
-                new(SyntaxKind.Slash, RavelBinaryOperatorKind.Division, new RavelRealFunction(IntDiv, III, this, true)),
-                new(SyntaxKind.Percent, RavelBinaryOperatorKind.Mod, new RavelRealFunction(IntMod, III, this, true)),
-                new(SyntaxKind.StarStar, RavelBinaryOperatorKind.Power, new RavelRealFunction(IntPow, III, this, true)),
-                new(SyntaxKind.Large, RavelBinaryOperatorKind.LargeComparision, new RavelRealFunction(IntLarge, IIB, this, true)),
-                new(SyntaxKind.Small, RavelBinaryOperatorKind.SmallComparision, new RavelRealFunction(IntSmall, IIB, this, true)),
-                new(SyntaxKind.LargeEqual, RavelBinaryOperatorKind.LargeEqualComparision, new RavelRealFunction(IntLargeEqual, IIB, this, true)),
-                new(SyntaxKind.SmallEqual, RavelBinaryOperatorKind.SmallEqualComparision, new RavelRealFunction(IntSmallEqual, IIB, this, true)),
-                new(SyntaxKind.EqualEqual, RavelBinaryOperatorKind.EqualComparision, new RavelRealFunction(IntEqual, IIB, this, true)),
-                new(SyntaxKind.NotEqual, RavelBinaryOperatorKind.NotEqualComparision, new RavelRealFunction(IntNotEqual, IIB, this, true)),
+                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(IntAdd, III, true)),
+                new(SyntaxKind.Minus, RavelBinaryOperatorKind.Subtraction, new RavelRealFunction(IntSub, III, true)),
+                new(SyntaxKind.Star, RavelBinaryOperatorKind.Multiplication, new RavelRealFunction(IntMul, III, true)),
+                new(SyntaxKind.Slash, RavelBinaryOperatorKind.Division, new RavelRealFunction(IntDiv, III, true)),
+                new(SyntaxKind.Percent, RavelBinaryOperatorKind.Mod, new RavelRealFunction(IntMod, III, true)),
+                new(SyntaxKind.StarStar, RavelBinaryOperatorKind.Power, new RavelRealFunction(IntPow, III, true)),
+                new(SyntaxKind.Large, RavelBinaryOperatorKind.LargeComparision, new RavelRealFunction(IntLarge, IIB, true)),
+                new(SyntaxKind.Small, RavelBinaryOperatorKind.SmallComparision, new RavelRealFunction(IntSmall, IIB, true)),
+                new(SyntaxKind.LargeEqual, RavelBinaryOperatorKind.LargeEqualComparision, new RavelRealFunction(IntLargeEqual, IIB, true)),
+                new(SyntaxKind.SmallEqual, RavelBinaryOperatorKind.SmallEqualComparision, new RavelRealFunction(IntSmallEqual, IIB, true)),
+                new(SyntaxKind.EqualEqual, RavelBinaryOperatorKind.EqualComparision, new RavelRealFunction(IntEqual, IIB, true)),
+                new(SyntaxKind.NotEqual, RavelBinaryOperatorKind.NotEqualComparision, new RavelRealFunction(IntNotEqual, IIB, true)),
             });
 
             RavelType II = GetFuncType(IntType, IntType);
             IntType.UnaryOperators.AddRange(new RavelUnaryOperator[]
             {
-                new(SyntaxKind.Minus, RavelUnaryOperatorKind.Negation, new RavelRealFunction(IntNegation, II, this, true)),
-                new(SyntaxKind.Plus, RavelUnaryOperatorKind.Indentity, new RavelRealFunction(IntIdentity, II, this, true)),
+                new(SyntaxKind.Minus, RavelUnaryOperatorKind.Negation, new RavelRealFunction(IntNegation, II, true)),
+                new(SyntaxKind.Plus, RavelUnaryOperatorKind.Indentity, new RavelRealFunction(IntIdentity, II, true)),
             });
             RavelType BBB = GetFuncType(BoolType, BoolType, BoolType);
 
             BoolType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
-                new(SyntaxKind.And, RavelBinaryOperatorKind.And, new RavelRealFunction(BoolAnd, BBB, this, true)),
-                new(SyntaxKind.Or, RavelBinaryOperatorKind.Or, new RavelRealFunction(BoolOr, BBB, this, true)),
-                new(SyntaxKind.ShortCutAnd, RavelBinaryOperatorKind.ShortCutAnd, new RavelRealFunction(BoolAnd, BBB, this, true)),
-                new(SyntaxKind.ShortCutOr, RavelBinaryOperatorKind.ShortCutOr, new RavelRealFunction(BoolOr, BBB, this, true)),
+                new(SyntaxKind.And, RavelBinaryOperatorKind.And, new RavelRealFunction(BoolAnd, BBB, true)),
+                new(SyntaxKind.Or, RavelBinaryOperatorKind.Or, new RavelRealFunction(BoolOr, BBB, true)),
+                new(SyntaxKind.ShortCutAnd, RavelBinaryOperatorKind.ShortCutAnd, new RavelRealFunction(BoolAnd, BBB, true)),
+                new(SyntaxKind.ShortCutOr, RavelBinaryOperatorKind.ShortCutOr, new RavelRealFunction(BoolOr, BBB, true)),
             });
             RavelType BB = GetFuncType(BoolType, BoolType);
 
             BoolType.UnaryOperators.AddRange(new RavelUnaryOperator[]
             {
-                new(SyntaxKind.Not, RavelUnaryOperatorKind.Not, new RavelRealFunction(BoolNot, BB, this, true)),
+                new(SyntaxKind.Not, RavelUnaryOperatorKind.Not, new RavelRealFunction(BoolNot, BB, true)),
             });
 
             RavelType SOS = GetFuncType(StringType, StringType, ObjectType);
 
             StringType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
-                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(StringAdd, SOS, this, true))
+                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(StringAdd, SOS, true))
             });
 
             RavelType TTT = GetFuncType(TypeType, TypeType, TypeType);
             TypeType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
-                new(SyntaxKind.MinusLarge, RavelBinaryOperatorKind.Point, new RavelRealFunction(TypePoint, TTT, this, true))
+                new(SyntaxKind.MinusLarge, RavelBinaryOperatorKind.Point, new RavelRealFunction(TypePoint, TTT, true))
             });
             RavelType LS = GetFuncType(StringType, EnumerableType);//?
-            EnumerableType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ListToString, LS, this, true)), "ToString", true, true, true);
+            EnumerableType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ListToString, LS, true)), "ToString", true, true, true);
         }
         private RavelObject GetFunctionType(RavelObject first, RavelObject second)
         {
             var f = first.GetValue<RavelType>();
             var s = second.GetValue<RavelType>();
-            var func = new RavelType(FunctionConstructor, CallableType, new RavelType[] { f, s }, new());
+            RavelType func = TypePoolGetFunctionType(f, s);
+            return RavelObject.GetType(func);
+        }
+
+        private RavelType TypePoolGetFunctionType(RavelType f, RavelType s)
+        {
+            return new RavelType(FunctionConstructor, CallableType, new RavelType[] { f, s }, new());
+        }
+
+        private RavelObject GetListType(RavelObject first)
+        {
+            var f = first.GetValue<RavelType>();
+            var func = new RavelType(ListConstructor, EnumerableType, new RavelType[] { f  }, new());
             return RavelObject.GetType(func);
         }
         public RavelType VoidType { get; }
@@ -155,7 +181,7 @@ namespace Ravel.Values
                 }
                 else
                 {
-                    type = FunctionConstructor.GetRavelType(types[index], type);
+                    type = TypePoolGetFunctionType(types[index], type);
                 }
                 if (index - 1 >= 0)
                 {
@@ -290,7 +316,7 @@ namespace Ravel.Values
         }
         internal RavelObject ObjectTypeOf(RavelObject operand)
         {
-            return RavelObject.GetType(operand.Type, this);
+            return RavelObject.GetType(operand.Type);
         }
         internal RavelObject StringAdd(RavelObject left, RavelObject right)
         {
@@ -302,7 +328,7 @@ namespace Ravel.Values
         {
             var l = left.GetValue<RavelType>();
             var r = right.GetValue<RavelType>();
-            return RavelObject.GetType(GetFuncType(r, l), this);
+            return RavelObject.GetType(GetFuncType(r, l));
         }
 
         internal RavelObject ListToString(RavelObject list)

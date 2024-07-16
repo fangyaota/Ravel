@@ -4,7 +4,7 @@
     {
         public RavelType[] RealParameters { get; }
         public RavelType ResultType { get; }
-        public RavelType Type { get; }
+        public RavelType Type { get; internal set; }
 
         public RavelTypePool TypePool => Type.TypePool;
         public abstract bool IsConst { get; }
@@ -21,7 +21,7 @@
             if (obj.Length < RealParameters.Length)
             {
                 RavelType newType = TypePool.GetFuncType(ResultType, RealParameters[obj.Length..]);
-                return RavelObject.GetFunction(new RavelParcialFunction(this, obj, newType, TypePool));
+                return RavelObject.GetFunction(new RavelParcialFunction(this, obj, newType));
             }
             if (obj.Length == RealParameters.Length)
             {
@@ -41,7 +41,7 @@
             Scope = scope;
             Name = name;
         }
-        public RavelFunction Function { get; }
+        public RavelFunction Function { get; internal set; }
         public RavelScope Scope { get; }
         public string Name { get; }
 

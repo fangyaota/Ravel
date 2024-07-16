@@ -218,8 +218,10 @@ internal class Interactor : Repl
 
                 Console.ResetColor();
                 Console.WriteLine(endLine[diagnostic.Span.End - endLine.Start, endLine.LengthIncludingLineBreaking].Replace("\r","").Replace("\n",""));
-                Console.Write(new string(' ', diagnostic.Span.Start - endLine.Start));
-
+                if (diagnostic.Span.Start >= endLine.Start)
+                {
+                    Console.Write(new string(' ', diagnostic.Span.Start - endLine.Start));
+                }
                 Console.ForegroundColor = ConsoleColor.Yellow;
 
                 Console.Write(new string('^', diagnostic.Span.Length));

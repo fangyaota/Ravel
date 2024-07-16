@@ -2,8 +2,8 @@
 {
     public class RavelParcialFunction : RavelFunction
     {
-        public RavelParcialFunction(RavelFunction ravelFunction, RavelObject[] objs, RavelType type, RavelTypePool typePool)
-            : base(type, typePool, ravelFunction.RealParameters.Length - objs.Length)
+        public RavelParcialFunction(RavelFunction ravelFunction, RavelObject[] objs, RavelType type)
+            : base(type, ravelFunction.RealParameters.Length - objs.Length)
         {
             RavelFunction = ravelFunction;
             Objs = objs;

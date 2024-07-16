@@ -71,11 +71,7 @@ namespace Ravel.Values
         }
         public override string ToString()
         {
-            if (IsFunction)
-            {
-                return $"{Parameter}->{ReturnType}";
-            }
-            return $"{Name}";
+            return Name;
         }
 
         public RavelBinaryOperator? GetOperator(SyntaxKind kind, RavelType right)
