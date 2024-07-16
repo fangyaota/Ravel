@@ -39,7 +39,7 @@ namespace Ravel.Values
             var TTT = GetFuncType(TypeType, TypeType, TypeType);
             var TT = GetFuncType(TypeType, TypeType);
 
-            FunctionConstructor.Function = new RavelRealFunction(GetFunctionType, TTT, true);
+            FunctionConstructor.Function = new RavelRealFunction(TypePoint, TTT, true);
 
             ListConstructor = new(new RavelRealFunction(GetListType, TT, true), SystemScope, "list");
             True = RavelObject.GetBoolean(true, this);
@@ -61,12 +61,19 @@ namespace Ravel.Values
 
             RavelType OSS = GetFuncType(StringType, ObjectType, StringType);
 
+            RavelType OOB = GetFuncType(BoolType, ObjectType, ObjectType);
+
             RavelRealFunction objectIs = new(ObjectIs, OTB, true);
+
+            RavelRealFunction objectEqual = new(ObjEqual, OOB, false);
+
+            RavelRealFunction stringAdd = new(StringAdd, OSS, true);
 
             ObjectType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
                 new (SyntaxKind.Is, RavelBinaryOperatorKind.TypeIs, objectIs),
-                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(StringAdd, OSS, true))
+                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, stringAdd),
+                new(SyntaxKind.EqualEqual, RavelBinaryOperatorKind.EqualComparision, objectEqual),
 
             });
             RavelType OS = GetFuncType(StringType, ObjectType);
@@ -129,25 +136,9 @@ namespace Ravel.Values
             RavelType LS = GetFuncType(StringType, EnumerableType);//?
             EnumerableType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ListToString, LS, true)), "ToString", true, true, true);
         }
-        private RavelObject GetFunctionType(RavelObject first, RavelObject second)
-        {
-            var f = first.GetValue<RavelType>();
-            var s = second.GetValue<RavelType>();
-            RavelType func = TypePoolGetFunctionType(f, s);
-            return RavelObject.GetType(func);
-        }
+        
 
-        private RavelType TypePoolGetFunctionType(RavelType f, RavelType s)
-        {
-            return new RavelType(FunctionConstructor, CallableType, new RavelType[] { f, s }, new());
-        }
-
-        private RavelObject GetListType(RavelObject first)
-        {
-            var f = first.GetValue<RavelType>();
-            var func = new RavelType(ListConstructor, EnumerableType, new RavelType[] { f  }, new());
-            return RavelObject.GetType(func);
-        }
+        
         public RavelType VoidType { get; }
         public RavelType IntType { get; }
         public RavelType BoolType { get; }
@@ -170,25 +161,36 @@ namespace Ravel.Values
         public RavelType GetFuncType(RavelType returnType, params RavelType[] types)
         {
             types = types.Append(returnType).ToArray();
-            RavelType type = types[^1];
+            RavelType currentType = types[^1];
             string name = types[^1].ToString();
 
             for(int index = types.Length - 1; index >= 0; index--)
             {
                 if (TypeMap.TryGetValue(name, out var val))
                 {
-                    type = val;
+                    currentType = val;
                 }
                 else
                 {
-                    type = TypePoolGetFunctionType(types[index], type);
+                    currentType = TypePoolGetFunctionType(types[index], currentType);
                 }
                 if (index - 1 >= 0)
                 {
-                    name = $"{name} {types[index - 1]}";
+                    name = FunctionConstructor.GetSpecificName(currentType, types[index - 1]);
                 }
             }
-            return type;
+            return currentType;
+        }
+        private RavelType TypePoolGetFunctionType(RavelType f, RavelType s)
+        {
+            return new RavelType(FunctionConstructor, CallableType, new RavelType[] { f, s }, new());
+        }
+
+        private RavelObject GetListType(RavelObject first)
+        {
+            var f = first.GetValue<RavelType>();
+            var func = new RavelType(ListConstructor, EnumerableType, new RavelType[] { f }, new());
+            return RavelObject.GetType(func);
         }
         public RavelType GetMappedType(SysType type)
         {
@@ -209,6 +211,12 @@ namespace Ravel.Values
                 return TypeType;
             }
             throw new NotImplementedException();
+        }
+        internal RavelObject ObjEqual(RavelObject left, RavelObject right)
+        {
+            object l = left.GetValue<object>();
+            object r = right.GetValue<object>();
+            return l == r ? True : False;
         }
         internal RavelObject ObjGetString(RavelObject arg)
         {
@@ -324,13 +332,13 @@ namespace Ravel.Values
             string r = right.ToString();
             return RavelObject.GetString(l + r, this);
         }
-        internal RavelObject TypePoint(RavelObject left, RavelObject right)
+        internal RavelObject TypePoint(RavelObject first, RavelObject second)
         {
-            var l = left.GetValue<RavelType>();
-            var r = right.GetValue<RavelType>();
-            return RavelObject.GetType(GetFuncType(r, l));
+            var f = first.GetValue<RavelType>();
+            var s = second.GetValue<RavelType>();
+            RavelType func = GetFuncType(f, s);
+            return RavelObject.GetType(func);
         }
-
         internal RavelObject ListToString(RavelObject list)
         {
             StringBuilder builder = new();

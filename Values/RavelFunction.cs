@@ -32,29 +32,4 @@
         }
         protected abstract RavelObject InvokeMust(RavelObject[] obj);
     }
-
-    public class RavelConstructor
-    {
-        public RavelConstructor(RavelFunction function, RavelScope scope, string name)
-        {
-            Function = function;
-            Scope = scope;
-            Name = name;
-        }
-        public RavelFunction Function { get; internal set; }
-        public RavelScope Scope { get; }
-        public string Name { get; }
-
-        public RavelTypePool TypePool => Function.TypePool;
-
-        public RavelType GetRavelType(params RavelType[] genericTypes)
-        {
-            var name = RavelType.GetTypeName(this, genericTypes);
-            if (!TypePool.TypeMap.TryGetValue(name, out var type))
-            {
-                type = Function.Invoke(genericTypes.Select(x => RavelObject.GetType(x)).ToArray()).GetValue<RavelType>();
-            }
-            return type;
-        }
-    }
 }

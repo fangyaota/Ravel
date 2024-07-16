@@ -39,7 +39,7 @@ namespace Ravel.Values
         }
         public RavelType(RavelConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
         {
-            var name = GetTypeName(typeConstructor, genericTypes);
+            var name = typeConstructor.GetSpecificName(genericTypes);
             Name = name;
             TypePool = parent.TypePool;
             Parent = parent;
@@ -47,15 +47,6 @@ namespace Ravel.Values
             GenericTypes = genericTypes;
             SonVariables = temp_scope;
             TypeConstructor = typeConstructor;
-        }
-
-        public static string GetTypeName(RavelConstructor typeConstructor, RavelType[] genericTypes)
-        {
-            //if (typeGenerator.IsFunction)
-            //{
-            //    return string.Join("->", genericTypes.Append(typeGenerator));
-            //}
-            return $"({typeConstructor.Name} {string.Join(" ", genericTypes.Select(x => x.Name))})";
         }
         public bool IsSonOrEqual(RavelType other)
         {
