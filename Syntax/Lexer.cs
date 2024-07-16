@@ -176,10 +176,10 @@ namespace Ravel.Syntax
             {
                 SyntaxKind kind = Global.SyntaxFacts.GetKeywordKind(_nowText);
                 TryReport();
-                if (kind == SyntaxKind.Boolean)
-                {
-                    return new(kind, _start, _nowText, RavelObject.GetBoolean(bool.Parse(_nowText), Global.TypePool));
-                }
+                //if (kind == SyntaxKind.Boolean)
+                //{
+                //    return new(kind, _start, _nowText, RavelObject.GetBoolean(bool.Parse(_nowText), Global.TypePool));
+                //}
                 return new(kind, _start, _nowText, RavelObject.GetString(_nowText, Global.TypePool));
             }
 

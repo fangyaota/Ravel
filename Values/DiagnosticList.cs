@@ -40,7 +40,7 @@ namespace Ravel.Values
 
         public void ReportMissingToken(TextSpan span, SyntaxToken current, SyntaxKind expected)
         {
-            Rerror(span, $"缺失符号<{current.Kind}>，需要符号<{expected}>", 5);
+            Rerror(span, $"存在意外的符号<{current.Kind}>，需要符号<{expected}>", 5);
         }
 
         public void ReportOperatorNotDefined(BoundExpression left, BinaryExpressionSyntax syntax, BoundExpression right)

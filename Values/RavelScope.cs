@@ -1,8 +1,10 @@
 ﻿using Ravel.Binding;
 
+using System.Collections;
+
 namespace Ravel.Values
 {
-    public sealed class RavelScope : IScope
+    public sealed class RavelScope : IScope, IEnumerable<RavelVariable>
     {
         private RavelScope? parent;
         private Dictionary<string, RavelVariable> Variables { get; } = new();
@@ -20,18 +22,18 @@ namespace Ravel.Values
                 }
                 return v;
             }
-            set
-            {
-                Variables[name] = value;
-            }
         }
-        public bool TryDeclare(string name, RavelObject obj, bool isReadOnly, bool isConst)
+        public void Add(RavelVariable variable)
+        {
+            Variables.Add(variable.Name, variable);
+        }
+        public bool TryDeclare(string name, RavelObject obj, bool isReadOnly, bool isConst, bool functionSelf = false, VariableMode mode = VariableMode.Public)
         {
             if (Variables.ContainsKey(name))
             {
                 return false;
             }
-            Variables[name] = new RavelVariable(obj, name, isReadOnly, isConst);
+            Add(new RavelVariable(obj, name, isReadOnly, isConst, functionSelf, mode));
             return true;
         }
         public bool TryGetVariable(string name, out RavelVariable variable, VariableMode mode = VariableMode.Public)
@@ -67,6 +69,20 @@ namespace Ravel.Values
                 bound[variable.Key] = variable.Value;
             }
             return bound;
+        }
+
+        public IEnumerator<RavelVariable> GetEnumerator()
+        {
+            if(parent == null)
+            {
+                return Variables.Values.GetEnumerator();
+            }
+            return Variables.Values.Concat(parent).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

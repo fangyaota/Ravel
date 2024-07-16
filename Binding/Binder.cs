@@ -287,12 +287,12 @@ namespace Ravel.Binding
 
         r:
             BoundExpression sentence = BindExpression(defining.Sentence);
-            if(sentence is BoundErrorExpression)
+            _scope = s;
+            if (sentence is BoundErrorExpression)
             {
                 return sentence;
             }
             RavelType ty = Global.TypePool.GetFuncType(sentence.Type, parameters.Select(x => x.Type).ToArray());
-            _scope = s;
             return new BoundFunctionDefiningExpression(parameters, sentence, ty);
         }
 

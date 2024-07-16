@@ -86,6 +86,10 @@ namespace Ravel.Syntax
         private CompilationUnitSyntax ParseCompilationUnit()
         {
             ExpressionSyntax expression = ParseStatement();
+            while(Current.Kind == SyntaxKind.EndOfLine)
+            {
+                NextToken();
+            }
             SyntaxToken eof = MatchToken(SyntaxKind.EndOfFile);
             return new(expression, eof);
         }
@@ -96,7 +100,7 @@ namespace Ravel.Syntax
             {
                 return func;
             }
-            List<ExpressionSyntax> paramList = new List<ExpressionSyntax>();
+            List<ExpressionSyntax> paramList = new();
             do
             {
                 paramList.Add(ParseSingleton());
@@ -113,7 +117,7 @@ namespace Ravel.Syntax
             if (unaryPrecedence != 0 && unaryPrecedence >= parentPrecedence)
             {
                 SyntaxToken unaryOperator = NextToken();
-                ExpressionSyntax operand = ParseUnary(parentPrecedence);
+                ExpressionSyntax operand = ParseSingleton(unaryPrecedence);
                 return new UnaryExpressionSyntax(operand, unaryOperator);
             }
             else

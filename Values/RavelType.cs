@@ -35,7 +35,7 @@ namespace Ravel.Values
             Parent = parent.TypePool.ObjectType;
             TypePool.TypeMap[Name] = this;
             GenericTypes = Array.Empty<RavelType>();
-            SonVariables = new();
+            SonVariables = new(parent.SonVariables);
         }
         public RavelType(RavelConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
         {

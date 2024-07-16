@@ -8,9 +8,9 @@ namespace Ravel.Values
         {
             UnaryOperatorPrecedence = new()
             {
-                [SyntaxKind.Plus] = 15,
-                [SyntaxKind.Minus] = 15,
-                [SyntaxKind.Not] = 15,
+                [SyntaxKind.Plus] = 11,
+                [SyntaxKind.Minus] = 11,
+                [SyntaxKind.Not] = 11,
             };
             BinaryOperatorPrecedence = new()
             {
@@ -41,9 +41,9 @@ namespace Ravel.Values
                 [SyntaxKind.Slash] = 9,
                 [SyntaxKind.Percent] = 9,
 
-                [SyntaxKind.StarStar] = 10,
+                [SyntaxKind.StarStar] = 12,
 
-                [SyntaxKind.MinusLarge] = 11,
+                [SyntaxKind.MinusLarge] = 13,
 
             };
             BinaryOperatorDirection = new()
@@ -52,8 +52,7 @@ namespace Ravel.Values
             };
             KeywordKind = new()
             {
-                ["true"] = SyntaxKind.Boolean,
-                ["false"] = SyntaxKind.Boolean,
+
             };
             SyntaxDict = new()
             {

@@ -7,8 +7,6 @@ namespace Ravel.Values
         public RavelGlobal()
         {
             SyntaxFacts = new();
-            SyntaxFacts = new();
-
 
             TypePool = new();
             
@@ -30,12 +28,12 @@ namespace Ravel.Values
 
             Variables = new(TypePool.SystemScope)
             {
-                ["typeof"] = new(RavelObject.GetFunction(typeOf), "typeof", true, true),
-                ["add"] = new(RavelObject.GetFunction(add), "add", false, false),
-                ["input"] = new(RavelObject.GetFunction(input), "input", false, true, true),
-                ["print"] = new(RavelObject.GetFunction(print), "print", false, true),
-                ["randint"] = new(RavelObject.GetFunction(randint), "randint", false, true),
-                ["list"] = new(RavelObject.GetFunction(TypePool.ListConstructor.Function), "list", true, true),
+                new(RavelObject.GetFunction(typeOf), "typeof", true, true),
+                new(RavelObject.GetFunction(add), "add", false, false),
+                new(RavelObject.GetFunction(input), "input", false, true, true),
+                new(RavelObject.GetFunction(print), "print", false, true),
+                new(RavelObject.GetFunction(randint), "randint", false, true),
+                new(RavelObject.GetFunction(TypePool.ListConstructor.Function), "list", true, true),
             };
         }
         public RavelSyntaxFacts SyntaxFacts { get; }

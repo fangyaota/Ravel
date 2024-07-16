@@ -42,17 +42,27 @@ namespace Ravel.Values
             FunctionConstructor.Function = new RavelRealFunction(TypePoint, TTT, true);
 
             ListConstructor = new(new RavelRealFunction(GetListType, TT, true), SystemScope, "list");
+            Unit = RavelObject.GetVoid(this);
             True = RavelObject.GetBoolean(true, this);
             False = RavelObject.GetBoolean(false, this);
             RegistFunctions();
 
-            SystemScope["int"] = new(RavelObject.GetType(IntType), "int", true, true);
-            SystemScope["bool"] = new(RavelObject.GetType(BoolType), "bool", true, true);
-            SystemScope["string"] = new(RavelObject.GetType(StringType), "string", true, true);
-            SystemScope["type"] = new(RavelObject.GetType(TypeType), "type", true, true);
-            SystemScope["object"] = new(RavelObject.GetType(ObjectType), "object", true, true);
-            SystemScope["void"] = new(RavelObject.GetType(VoidType), "void", true, true);
+            SystemScope.TryDeclare("int",RavelObject.GetType(IntType), true, true);
+            SystemScope.TryDeclare("bool", RavelObject.GetType(BoolType), true, true);
+            SystemScope.TryDeclare("string", RavelObject.GetType(StringType), true, true);
+            SystemScope.TryDeclare("type", RavelObject.GetType(TypeType), true, true);
+            SystemScope.TryDeclare("object", RavelObject.GetType(ObjectType), true, true);
+            SystemScope.TryDeclare("void", RavelObject.GetType(VoidType), true, true);
 
+            SystemScope.TryDeclare("callable", RavelObject.GetType(CallableType), true, true);
+            SystemScope.TryDeclare("function", RavelObject.GetFunction(FunctionConstructor.Function), true, true);
+
+            SystemScope.TryDeclare("enumerable", RavelObject.GetType(EnumerableType), true, true);
+            SystemScope.TryDeclare("list", RavelObject.GetFunction(ListConstructor.Function), true, true);
+
+            SystemScope.TryDeclare("true", True, true, true);
+            SystemScope.TryDeclare("false", False, true, true);
+            SystemScope.TryDeclare("unit", Unit, true, true);
         }
 
         private void RegistFunctions()
@@ -77,7 +87,7 @@ namespace Ravel.Values
 
             });
             RavelType OS = GetFuncType(StringType, ObjectType);
-            ObjectType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ObjGetString, OS, true)), "ToString", true, true, true);
+            ObjectType.SonVariables.TryDeclare("ToString", RavelObject.GetFunction(new RavelRealFunction(ObjGetString, OS, true)), true, true, true);
 
 
 
@@ -134,7 +144,7 @@ namespace Ravel.Values
                 new(SyntaxKind.MinusLarge, RavelBinaryOperatorKind.Point, new RavelRealFunction(TypePoint, TTT, true))
             });
             RavelType LS = GetFuncType(StringType, EnumerableType);//?
-            EnumerableType.SonVariables["ToString"] = new(RavelObject.GetFunction(new RavelRealFunction(ListToString, LS, true)), "ToString", true, true, true);
+            EnumerableType.SonVariables.TryDeclare("ToString", RavelObject.GetFunction(new RavelRealFunction(ListToString, LS, true)), true, true, true);
         }
         
 
@@ -176,7 +186,7 @@ namespace Ravel.Values
                 }
                 if (index - 1 >= 0)
                 {
-                    name = FunctionConstructor.GetSpecificName(currentType, types[index - 1]);
+                    name = FunctionConstructor.GetSpecificName(types[index - 1], currentType);
                 }
             }
             return currentType;
