@@ -369,7 +369,10 @@ namespace Ravel.Binding
                 _diagnostics.ReportParametersTooMany(syntax.Function, paramList.Count, max);
                 return func;
             }
-
+            if(paramList.Any(x => x is BoundErrorExpression))
+            {
+                return new BoundErrorExpression();
+            }
             for (int i = 0; i < paramList.Count; i++)
             {
                 RavelType paramType = paramList[i].Type;
@@ -447,6 +450,15 @@ namespace Ravel.Binding
             {
                 _diagnostics.ReportOperatorNotDefined(left, syntax, right);
                 return left;
+            }
+            if(oper.SyntaxKind == SyntaxKind.As)
+            {
+                if(right.IsConst)
+                {
+                    var temp_evaluator = new NeoEvaluator(right, Global);//?
+                    var result_type = temp_evaluator.Evaluate().GetValue<RavelType>();
+                    return new BoundAsExpression(left, oper, right, result_type);
+                }
             }
             return new BoundBinaryExpression(left, oper, right);
         }

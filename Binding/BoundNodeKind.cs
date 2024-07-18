@@ -15,6 +15,7 @@
         IfExpression,
         WhileExpression,
         ErrorExpression,
-        DeclareExpression
+        DeclareExpression,
+        AsExpression
     }
 }

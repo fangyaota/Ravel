@@ -73,17 +73,23 @@ namespace Ravel.Values
 
             RavelType OOB = GetFuncType(BoolType, ObjectType, ObjectType);
 
+            RavelType OTO = GetFuncType(ObjectType, ObjectType, TypeType);
+
             RavelRealFunction objectIs = new(ObjectIs, OTB, true);
 
             RavelRealFunction objectEqual = new(ObjEqual, OOB, false);
 
             RavelRealFunction stringAdd = new(StringAdd, OSS, true);
 
+            RavelRealFunction objectAs = new(ObjAs, OTO, true);//?
+
+
             ObjectType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
                 new (SyntaxKind.Is, RavelBinaryOperatorKind.TypeIs, objectIs),
                 new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, stringAdd),
                 new(SyntaxKind.EqualEqual, RavelBinaryOperatorKind.EqualComparision, objectEqual),
+                new(SyntaxKind.As, RavelBinaryOperatorKind.As, objectAs),
 
             });
             RavelType OS = GetFuncType(StringType, ObjectType);
@@ -341,6 +347,10 @@ namespace Ravel.Values
             string l = left.ToString();
             string r = right.ToString();
             return RavelObject.GetString(l + r, this);
+        }
+        internal RavelObject ObjAs(RavelObject left, RavelObject right)
+        {
+            return left;
         }
         internal RavelObject TypePoint(RavelObject first, RavelObject second)
         {

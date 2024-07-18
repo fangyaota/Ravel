@@ -2,7 +2,7 @@
 
 namespace Ravel.Binding
 {
-    internal sealed class BoundBinaryExpression : BoundExpression
+    internal class BoundBinaryExpression : BoundExpression
     {
         public BoundBinaryExpression(BoundExpression left, RavelBinaryOperator op, BoundExpression right)
         {
@@ -26,5 +26,20 @@ namespace Ravel.Binding
             yield return Left;
             yield return Right;
         }
+    }
+    internal sealed class BoundAsExpression : BoundBinaryExpression
+    {
+        public BoundAsExpression(BoundExpression left, RavelBinaryOperator op, BoundExpression right, RavelType resultType)
+            : base(left, op, right)
+        {
+            Type = resultType;
+        }
+
+
+        public override RavelType Type { get; }
+
+        public override BoundNodeKind Kind => BoundNodeKind.AsExpression;
+
+        public override bool IsConst => Left.IsConst && Right.IsConst && Op.Function.IsConst;
     }
 }

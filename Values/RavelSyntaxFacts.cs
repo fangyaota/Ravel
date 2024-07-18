@@ -45,6 +45,8 @@ namespace Ravel.Values
 
                 [SyntaxKind.MinusLarge] = 13,
 
+                [SyntaxKind.As] = 14,
+
             };
             BinaryOperatorDirection = new()
             {
@@ -99,8 +101,10 @@ namespace Ravel.Values
                 ["--"] = SyntaxKind.MinusMinus,
                 [".."] = SyntaxKind.DotDot,
                 ["$"] = SyntaxKind.Cash,
+
                 ["if"] = SyntaxKind.If,
                 ["is"] = SyntaxKind.Is,
+                ["as"] = SyntaxKind.As,
                 ["for"] = SyntaxKind.For,
                 ["while"] = SyntaxKind.While,
                 ["using"] = SyntaxKind.Using,

@@ -104,15 +104,18 @@ namespace Ravel
                 case 1:
                     if (CurrentCallStack.SonResults[0].GetValue<bool>())
                     {
-                        RavelScope son = new(CurrentCallStack.Scope);
                         CurrentCallStack = new(CurrentCallStack, @while.Expression);
-                        CurrentCallStack.SonResults.Clear();
                     }
                     else
                     {
                         AddResultAndReturn(Global.TypePool.Unit);
                     }
                     break;
+                case 2:
+                    CurrentCallStack.SonResults.Clear();
+                    CurrentCallStack = new(CurrentCallStack, @while.Condition);
+                    break;
+
             }
         }
 

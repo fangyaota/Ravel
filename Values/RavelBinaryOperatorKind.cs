@@ -22,5 +22,6 @@
         Power,
         Mod,
         Point,
+        As,
     }
 }

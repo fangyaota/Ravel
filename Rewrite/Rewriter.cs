@@ -28,6 +28,7 @@ namespace Ravel.Rewrite
                 BoundAssignmentExpression assignment => RewriteAssignment(assignment),
                 BoundDefiningExpression Defining => RewriteDefining(Defining),
                 BoundVariableExpression variable => RewriteVariable(variable),
+                BoundAsExpression asExp => RewriteAs(asExp),
                 BoundUnaryExpression unary => RewriteUnary(unary),
                 BoundBinaryExpression binary => RewriteBinary(binary),
                 BoundFunctionCallExpression call => RewriteFunctionCall(call),
@@ -41,7 +42,18 @@ namespace Ravel.Rewrite
             };
         }
 
-        private BoundExpression RewriteWhile(BoundWhileExpression @while)
+        protected virtual BoundExpression RewriteAs(BoundAsExpression asExp)
+        {
+            var e = Rewrite(asExp.Left);
+            var type = Rewrite(asExp.Right);
+            if((e, type) == (asExp.Left, asExp.Right))
+            {
+                return asExp;
+            }
+            return new BoundAsExpression(e, asExp.Op, type, asExp.Type);
+        }
+
+        protected virtual BoundExpression RewriteWhile(BoundWhileExpression @while)
         {
             var cond = Rewrite(@while.Condition);
             var expTrue = Rewrite(@while.Expression);

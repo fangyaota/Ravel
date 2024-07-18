@@ -85,5 +85,6 @@
         Dynamic,
         Const,
         Readonly,
+        As,
     }
 }
