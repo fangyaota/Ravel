@@ -10,13 +10,21 @@ namespace Ravel.Values
     public class RavelTypePool
     {
         public Dictionary<string, RavelType> TypeMap { get; } = new();
+
+#nullable disable
         public RavelTypePool()
         {
             SystemScope = new()
             {
-
             };
+            RegistObjects();
+            RegistOperators();
+            RegistBuiltins();
+        }
+#nullable enable
 
+        private void RegistObjects()
+        {
             ObjectType = new("object", this);
 
             TypeType = new("type", ObjectType);
@@ -42,12 +50,15 @@ namespace Ravel.Values
             FunctionConstructor.Function = new RavelRealFunction(TypePoint, TTT, true);
 
             ListConstructor = new(new RavelRealFunction(GetListType, TT, true), SystemScope, "list");
+
             Unit = RavelObject.GetVoid(this);
             True = RavelObject.GetBoolean(true, this);
             False = RavelObject.GetBoolean(false, this);
-            RegistFunctions();
+        }
 
-            SystemScope.TryDeclare("int",RavelObject.GetType(IntType), true, true);
+        private void RegistBuiltins()
+        {
+            SystemScope.TryDeclare("int", RavelObject.GetType(IntType), true, true);
             SystemScope.TryDeclare("bool", RavelObject.GetType(BoolType), true, true);
             SystemScope.TryDeclare("string", RavelObject.GetType(StringType), true, true);
             SystemScope.TryDeclare("type", RavelObject.GetType(TypeType), true, true);
@@ -65,7 +76,7 @@ namespace Ravel.Values
             SystemScope.TryDeclare("unit", Unit, true, true);
         }
 
-        private void RegistFunctions()
+        private void RegistOperators()
         {
             RavelType OTB = GetFuncType(BoolType, ObjectType, TypeType);
 
@@ -155,20 +166,20 @@ namespace Ravel.Values
         
 
         
-        public RavelType VoidType { get; }
-        public RavelType IntType { get; }
-        public RavelType BoolType { get; }
-        public RavelType StringType { get; }
-        public RavelType TypeType { get; }
-        public RavelRealConstructor FunctionConstructor { get; }
-        public RavelRealConstructor ListConstructor { get; }
-        public RavelType EnumerableType { get; }
-        public RavelType CallableType { get; }
-        public RavelType ObjectType { get; }
-        public RavelObject Unit { get; }
-        public RavelObject True { get; }
-        public RavelObject False { get; }
-        public RavelScope SystemScope { get; }
+        public RavelType VoidType { get; private set; }
+        public RavelType IntType { get; private set; }
+        public RavelType BoolType { get; private set; }
+        public RavelType StringType { get; private set; }
+        public RavelType TypeType { get; private set; }
+        public RavelRealConstructor FunctionConstructor { get; private set; }
+        public RavelRealConstructor ListConstructor { get; private set; }
+        public RavelType EnumerableType { get; private set; }
+        public RavelType CallableType { get; private set; }
+        public RavelType ObjectType { get; private set; }
+        public RavelObject Unit { get; private set; }
+        public RavelObject True { get; private set; }
+        public RavelObject False { get; private set; }
+        public RavelScope SystemScope { get; private set; }
 
         public RavelObject GetRawObject(RavelType type, object? raw)
         {
@@ -202,7 +213,7 @@ namespace Ravel.Values
             return new RavelType(FunctionConstructor, CallableType, new RavelType[] { f, s }, new());
         }
 
-        private RavelObject GetListType(RavelObject first)
+        private RavelObject GetListType(NeoEvaluator evaluator, RavelObject first)
         {
             var f = first.GetValue<RavelType>();
             var func = new RavelType(ListConstructor, EnumerableType, new RavelType[] { f }, new());
@@ -228,138 +239,138 @@ namespace Ravel.Values
             }
             throw new NotImplementedException();
         }
-        internal RavelObject ObjEqual(RavelObject left, RavelObject right)
+        internal RavelObject ObjEqual(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             object l = left.GetValue<object>();
             object r = right.GetValue<object>();
             return l == r ? True : False;
         }
-        internal RavelObject ObjGetString(RavelObject arg)
+        internal RavelObject ObjGetString(NeoEvaluator evaluator, RavelObject arg)
         {
             return RavelObject.GetString(arg.ToString(), this);
         }
-        internal RavelObject IntAdd(RavelObject left, RavelObject right)
+        internal RavelObject IntAdd(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return RavelObject.GetInteger(l + r, this);
         }
-        internal RavelObject IntSub(RavelObject left, RavelObject right)
+        internal RavelObject IntSub(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return RavelObject.GetInteger(l - r, this);
         }
-        internal RavelObject IntMul(RavelObject left, RavelObject right)
+        internal RavelObject IntMul(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return RavelObject.GetInteger(l * r, this);
         }
-        internal RavelObject IntDiv(RavelObject left, RavelObject right)
+        internal RavelObject IntDiv(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return RavelObject.GetInteger(l / r, this);
         }
-        internal RavelObject IntMod(RavelObject left, RavelObject right)
+        internal RavelObject IntMod(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return RavelObject.GetInteger(l % r, this);
         }
-        internal RavelObject IntPow(RavelObject left, RavelObject right)
+        internal RavelObject IntPow(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return RavelObject.GetInteger(BigInteger.Pow(l, (int)r), this);
         }
-        internal RavelObject IntLarge(RavelObject left, RavelObject right)
+        internal RavelObject IntLarge(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return l > r ? True : False;
         }
-        internal RavelObject IntLargeEqual(RavelObject left, RavelObject right)
+        internal RavelObject IntLargeEqual(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return l >= r ? True : False;
         }
-        internal RavelObject IntSmall(RavelObject left, RavelObject right)
+        internal RavelObject IntSmall(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return l < r ? True : False;
         }
-        internal RavelObject IntSmallEqual(RavelObject left, RavelObject right)
+        internal RavelObject IntSmallEqual(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return l <= r ? True : False;
         }
-        internal RavelObject IntEqual(RavelObject left, RavelObject right)
+        internal RavelObject IntEqual(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return l == r ? True : False;
         }
-        internal RavelObject IntNotEqual(RavelObject left, RavelObject right)
+        internal RavelObject IntNotEqual(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             BigInteger l = left.GetValue<BigInteger>();
             BigInteger r = right.GetValue<BigInteger>();
             return l != r ? True : False;
         }
-        internal RavelObject BoolAnd(RavelObject left, RavelObject right)
+        internal RavelObject BoolAnd(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             bool l = left.GetValue<bool>();
             bool r = right.GetValue<bool>();
             return l & r ? True : False;
         }
-        internal RavelObject BoolOr(RavelObject left, RavelObject right)
+        internal RavelObject BoolOr(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             bool l = left.GetValue<bool>();
             bool r = right.GetValue<bool>();
             return l | r ? True : False;
         }
-        internal RavelObject IntIdentity(RavelObject obj)
+        internal RavelObject IntIdentity(NeoEvaluator evaluator, RavelObject obj)
         {
             return obj;
         }
-        internal RavelObject IntNegation(RavelObject obj)
+        internal RavelObject IntNegation(NeoEvaluator evaluator, RavelObject obj)
         {
             return RavelObject.GetInteger(-obj.GetValue<BigInteger>(), this);
         }
-        internal RavelObject BoolNot(RavelObject obj)
+        internal RavelObject BoolNot(NeoEvaluator evaluator, RavelObject obj)
         {
             return obj.GetValue<bool>() ? False : True;
         }
-        internal RavelObject ObjectIs(RavelObject left, RavelObject right)
+        internal RavelObject ObjectIs(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             return left.Type.IsSonOrEqual(right.GetValue<RavelType>()) ? True : False;
         }
-        internal RavelObject ObjectTypeOf(RavelObject operand)
+        internal RavelObject ObjectTypeOf(NeoEvaluator evaluator, RavelObject operand)
         {
             return RavelObject.GetType(operand.Type);
         }
-        internal RavelObject StringAdd(RavelObject left, RavelObject right)
+        internal RavelObject StringAdd(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             string l = left.ToString();
             string r = right.ToString();
             return RavelObject.GetString(l + r, this);
         }
-        internal RavelObject ObjAs(RavelObject left, RavelObject right)
+        internal RavelObject ObjAs(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
             return left;
         }
-        internal RavelObject TypePoint(RavelObject first, RavelObject second)
+        internal RavelObject TypePoint(NeoEvaluator evaluator, RavelObject first, RavelObject second)
         {
             var f = first.GetValue<RavelType>();
             var s = second.GetValue<RavelType>();
             RavelType func = GetFuncType(s, f);
             return RavelObject.GetType(func);
         }
-        internal RavelObject ListToString(RavelObject list)
+        internal RavelObject ListToString(NeoEvaluator evaluator, RavelObject list)
         {
             StringBuilder builder = new();
             builder.Append('[');

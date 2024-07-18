@@ -18,7 +18,7 @@ namespace Ravel.Values
             var name = GetSpecificName(genericTypes);
             if (!TypePool.TypeMap.TryGetValue(name, out var type))
             {
-                type = RealFunction.Invoke(genericTypes.Select(RavelObject.GetType).ToArray()).GetValue<RavelType>();
+                type = RealFunction.InvokeReal(evaluator, genericTypes.Select(RavelObject.GetType).ToArray()).GetValue<RavelType>();
             }
             return type;
         }

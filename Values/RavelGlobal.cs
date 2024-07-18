@@ -40,18 +40,18 @@ namespace Ravel.Values
         public RavelTypePool TypePool { get; }
         public RavelScope Variables { get; }
 
-        RavelObject VoidInput(RavelObject obj)
+        RavelObject VoidInput(NeoEvaluator evaluator, RavelObject obj)
         {
             return RavelObject.GetString(Console.ReadLine()!, TypePool);
         }
-        RavelObject VoidPrint(RavelObject obj)
+        RavelObject VoidPrint(NeoEvaluator evaluator, RavelObject obj)
         {
             Console.WriteLine(obj);
             return TypePool.Unit;
         }
 
         Random? random;
-        RavelObject Randint(RavelObject min, RavelObject max)
+        RavelObject Randint(NeoEvaluator evaluator, RavelObject min, RavelObject max)
         {
             random ??= new();
             return RavelObject.GetInteger(random.NextInt64((long)min.GetValue<BigInteger>(), (long)max.GetValue<BigInteger>()), TypePool);

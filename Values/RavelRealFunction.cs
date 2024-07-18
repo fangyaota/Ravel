@@ -2,16 +2,16 @@
 {
     public class RavelRealFunction : RavelFunction
     {
-        public RavelRealFunction(Func<RavelObject, RavelObject> func, RavelType type, bool isConst)
+        public RavelRealFunction(Func<NeoEvaluator, RavelObject, RavelObject> func, RavelType type, bool isConst)
             : this((Delegate)func, type, isConst)
         {
         }
-        public RavelRealFunction(Func<RavelObject, RavelObject, RavelObject> func, RavelType type, bool isConst)
+        public RavelRealFunction(Func<NeoEvaluator, RavelObject, RavelObject, RavelObject> func, RavelType type, bool isConst)
             : this((Delegate)func, type, isConst)
         {
         }
-        public RavelRealFunction(Delegate func, RavelType type, bool isConst)
-            : base(type, func.Method.GetParameters().Length)
+        private RavelRealFunction(Delegate func, RavelType type, bool isConst)
+            : base(type, func.Method.GetParameters().Length - 1)
         {
             Func = func;
             IsConst = isConst;
@@ -22,11 +22,11 @@
 
         protected override void InvokeMust(NeoEvaluator evaluator, RavelObject[] objs)
         {
-            evaluator.CurrentCallStack.SonResults.Add(Invoke(objs));
+            evaluator.CurrentCallStack.SonResults.Add(InvokeReal(evaluator, objs));
         }
-        public RavelObject Invoke(params RavelObject[] objs)
+        public RavelObject InvokeReal(NeoEvaluator evaluator, params RavelObject[] objs)
         {
-            return (RavelObject)Func.DynamicInvoke(objs.Cast<object>().ToArray())!;
+            return (RavelObject)Func.DynamicInvoke(objs.Cast<object>().Prepend(evaluator).ToArray())!;
         }
     }
 }
