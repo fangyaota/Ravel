@@ -22,7 +22,7 @@
 
         protected override void InvokeMust(NeoEvaluator evaluator, RavelObject[] objs)
         {
-            evaluator.CurrentCallStack.SonResults.Add(InvokeReal(evaluator, objs));
+            evaluator.AddResult(InvokeReal(evaluator, objs));
         }
         public RavelObject InvokeReal(NeoEvaluator evaluator, params RavelObject[] objs)
         {

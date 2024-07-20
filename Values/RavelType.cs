@@ -1,8 +1,5 @@
 ﻿using Ravel.Syntax;
 
-using System.Security.AccessControl;
-using System.Text;
-
 namespace Ravel.Values
 {
     public delegate RavelObject RawConstructor(object? raw);
@@ -18,32 +15,48 @@ namespace Ravel.Values
         public RavelRealConstructor? TypeConstructor { get; }
         public RavelType[] GenericTypes { get; }
 
-        public RawConstructor? RawConstructor { get; set; }
-        public RavelType(string name, RavelTypePool typePool)
+
+        public static RavelType GetRavelType(string name, RavelTypePool typePool)
+        {
+            RavelType t = new(name, typePool);
+            typePool.TypeMap[name] = t;
+            return t;
+        }
+        public static RavelType GetNewType(string name, RavelType parent)
+        {
+            RavelType t = new(name, parent);
+            parent.TypePool.TypeMap[name] = t;
+            return t;
+        }
+        public static RavelType GetRavelType(RavelRealConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
+        {
+            RavelType t = new(typeConstructor, parent, genericTypes, temp_scope);
+            parent.TypePool.TypeMap[t.Name] = t;
+            return t;
+        }
+        private RavelType(string name, RavelTypePool typePool)
         {
             Name = name;
             TypePool = typePool;
             Parent = this;
-            TypePool.TypeMap[Name] = this;
             GenericTypes = Array.Empty<RavelType>();
             SonVariables = new();
         }
-        public RavelType(string name, RavelType parent)
+
+        private RavelType(string name, RavelType parent)
         {
             Name = name;
             TypePool = parent.TypePool;
             Parent = parent.TypePool.ObjectType;
-            TypePool.TypeMap[Name] = this;
             GenericTypes = Array.Empty<RavelType>();
             SonVariables = new(parent.SonVariables);
         }
-        public RavelType(RavelRealConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
+        private RavelType(RavelRealConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
         {
-            var name = typeConstructor.GetSpecificName(genericTypes);
+            string name = typeConstructor.GetSpecificName(genericTypes);
             Name = name;
             TypePool = parent.TypePool;
             Parent = parent;
-            TypePool.TypeMap[Name] = this;
             GenericTypes = genericTypes;
             SonVariables = temp_scope;
             TypeConstructor = typeConstructor;
@@ -99,9 +112,9 @@ namespace Ravel.Values
         {
             return SonVariables.TryGetVariable(name, out variable);
         }
-        public RavelObject RawObject(object? from = null)
+        public RavelObject GetRavelObject(object from)
         {
-            return RawConstructor == null ? throw new InvalidOperationException() : RawConstructor(from);
+            return new RavelObject(from, this, TypePool);
         }
         public bool IsGenericFrom(RavelRealConstructor constructor)
         {

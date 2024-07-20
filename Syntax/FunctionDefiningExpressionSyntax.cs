@@ -4,12 +4,12 @@ namespace Ravel.Syntax
 {
     internal class FunctionDefiningExpressionSyntax : ExpressionSyntax
     {
-        public FunctionDefiningExpressionSyntax(SyntaxToken left, List<DeclareExpressionSyntax> paramList, SyntaxToken right, SyntaxToken? minusLarge, SyntaxToken? typeIdentifier, SyntaxToken equalLarge, ExpressionSyntax sentence)
+        public FunctionDefiningExpressionSyntax(SyntaxToken left, List<DeclareExpressionSyntax> paramList, SyntaxToken right, SyntaxToken? colon, SyntaxToken? typeIdentifier, SyntaxToken equalLarge, ExpressionSyntax sentence)
         {
             Left = left;
             ParamList = paramList;
             Right = right;
-            MinusLarge = minusLarge;
+            Colon = colon;
             TypeIdentifier = typeIdentifier;
             EqualLarge = equalLarge;
             Sentence = sentence;
@@ -19,7 +19,7 @@ namespace Ravel.Syntax
         public SyntaxToken Left { get; }
         public List<DeclareExpressionSyntax> ParamList { get; }
         public SyntaxToken Right { get; }
-        public SyntaxToken? MinusLarge { get; }
+        public SyntaxToken? Colon { get; }
         public SyntaxToken? TypeIdentifier { get; }
         public SyntaxToken EqualLarge { get; }
         public ExpressionSyntax Sentence { get; }
@@ -36,9 +36,9 @@ namespace Ravel.Syntax
                 yield return param;
             }
             yield return Right;
-            if (MinusLarge != null)
+            if (Colon != null)
             {
-                yield return MinusLarge;
+                yield return Colon;
             }
             if (TypeIdentifier != null)
             {

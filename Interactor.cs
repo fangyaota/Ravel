@@ -3,7 +3,7 @@ using Ravel.Binding;
 using Ravel.Syntax;
 using Ravel.Values;
 
-internal class Interactor : Repl
+internal class Interactor
 {
     private bool _outPut = true;
     private bool _showTree = false;
@@ -12,11 +12,10 @@ internal class Interactor : Repl
     private Compiler? compiler;
 
     public Interactor(RavelGlobal global)
-        : base()
     {
         Global = global;
     }
-    [MetaCommand("load", "加载代码")]
+    //[MetaCommand("load", "加载代码")]
     private void EvaluateLoad(string path)
     {
         path = Path.GetFullPath(path);
@@ -29,104 +28,43 @@ internal class Interactor : Repl
             return;
         }
 
-        var text = File.ReadAllLines(path);
-        foreach(var line in text )
+        string[] text = File.ReadAllLines(path);
+        foreach (string line in text)
         {
-            AddHistory(line);
+            //AddHistory(line);
             EvaluateSubmission(line);
         }
     }
-    [MetaCommand("out", "是否输出")]
-    private void EvaluateOutPut()
-    {
-        _outPut = !_outPut;
-        Console.WriteLine(_outPut ? "已开启显示" : "已关闭显示");
-    }
+    //[MetaCommand("out", "是否输出")]
+    
 
-    [MetaCommand("exit", "退出交互")]
+    //[MetaCommand("exit", "退出交互")]
     private void EvaluateExit()
     {
         Environment.Exit(0);
     }
 
-    [MetaCommand("cls", "清屏")]
+    //[MetaCommand("cls", "清屏")]
     private void EvaluateCls()
     {
         Console.Clear();
     }
 
-    [MetaCommand("reset", "清除历史记录")]
+    //[MetaCommand("reset", "清除历史记录")]
     private void EvaluateReset()
     {
         compiler = null;
     }
 
-    [MetaCommand("parse", "显示解析树")]
-    private void EvaluateShowTree()
-    {
-        _showTree = !_showTree;
-        Console.WriteLine(_showTree    ? "已开启显示" : "已关闭显示");
-    }
+    //[MetaCommand("parse", "显示解析树")]
+    
 
-    [MetaCommand("bind", "显示绑定树")]
-    private void EvaluateShowProgram()
-    {
-        _showProgram = !_showProgram;
-        Console.WriteLine(_showProgram ? "已开启显示" : "已关闭显示");
-    }
-
-    public override void Run()
-    {
-        EvaluateShowRavel();
-        base.Run();
-    }
-    [MetaCommand("credits", "显示作者")]
-    private void EvaluateShowRavel()
-    {
-        EvaluateCls();
-        Console.ResetColor();
-        Console.WriteLine("""
-             ____                                   ___       
-            /\  _`\                                /\_ \      
-            \ \ \L\ \      __      __  __     __   \//\ \     
-             \ \ ,  /    /'__`\   /\ \/\ \  /'__`\   \ \ \    
-              \ \ \\ \  /\ \L\.\_ \ \ \_/ |/\  __/    \_\ \_  
-               \ \_\ \_\\ \__/.\_\ \ \___/ \ \____\   /\____\ 
-                \/_/\/ / \/__/\/_/  \/__/   \/____/   \/____/ 
-                        _____           ___           ___
-                       /\  ___\        /'__`\        /'__`\   
-                       \ \ \__/       /\ \/\ \      /\ \/\ \  
-                        \ \___``\     \ \ \ \ \     \ \ \ \ \ 
-                         \/\ \L\ \ __  \ \ \_\ \ __  \ \ \_\ \
-                          \ \____//\_\  \ \____//\_\  \ \____/
-                           \/___/ \/_/   \/___/ \/_/   \/___/ 
-
-            Ravel 5.0.0 
-            XMX制作，欢迎捉虫！
-            """);
-        Console.Write("输入");
-
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.Write("#help");
-        Console.ResetColor();
-
-        Console.Write("获取更多信息");
-        Console.WriteLine();
-        Console.ResetColor();
-    }
-
-    [MetaCommand("control", "操作教程")]
+    //[MetaCommand("control", "操作教程")]
     private void EvaluateControl()
     {
         Console.ResetColor();
         Console.WriteLine("""
-        PgUp       上一条记录
-        PgDn       下一条记录
-        Home       跳至开头
-        End        跳至结尾
-        Del        向后删除
-
-        Enter(x2)  输入完成
+        
         """
         );
     }
@@ -182,7 +120,7 @@ internal class Interactor : Repl
         Console.ResetColor();
     }
 
-    protected override bool IsCompleteSubmission(IReadOnlyList<string> text)
+    protected bool IsCompleteSubmission(IReadOnlyList<string> text)
     {
         if (text.All(string.IsNullOrEmpty))
             return true;
@@ -191,21 +129,21 @@ internal class Interactor : Repl
                                        .Reverse()
                                        .TakeWhile(string.IsNullOrEmpty)
                                        .Any();
-        
+
         return lastTwoLinesAreBlank;
     }
 
-    protected override void EvaluateSubmission(string text)
+    protected void EvaluateSubmission(string text)
     {
         compiler = new Compiler(text, Global, compiler?.Evaluator.CurrentCallStack.Scope);
         if (compiler.Diagnostics.Any())
         {
-            foreach(var diagnostic in compiler.Diagnostics)
+            foreach (Diagnostic diagnostic in compiler.Diagnostics)
             {
-                var start = compiler.Source.GetLineIndex(diagnostic.Span.Start);
-                var end = compiler.Source.GetLineIndex(diagnostic.Span.End);
-                var startLine = compiler.Source.Lines[start];
-                var endLine = compiler.Source.Lines[end];
+                int start = compiler.Source.GetLineIndex(diagnostic.Span.Start);
+                int end = compiler.Source.GetLineIndex(diagnostic.Span.End);
+                Ravel.Text.TextLine startLine = compiler.Source.Lines[start];
+                Ravel.Text.TextLine endLine = compiler.Source.Lines[end];
 
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(diagnostic);
@@ -217,7 +155,7 @@ internal class Interactor : Repl
                 Console.Write(compiler.Source[diagnostic.Span]);
 
                 Console.ResetColor();
-                Console.WriteLine(endLine[diagnostic.Span.End - endLine.Start, endLine.LengthIncludingLineBreaking].Replace("\r","").Replace("\n",""));
+                Console.WriteLine(endLine[diagnostic.Span.End - endLine.Start, endLine.LengthIncludingLineBreaking].Replace("\r", "").Replace("\n", ""));
                 if (diagnostic.Span.Start >= endLine.Start)
                 {
                     Console.Write(new string(' ', diagnostic.Span.Start - endLine.Start));
@@ -247,11 +185,11 @@ internal class Interactor : Repl
             PrettyPrint(compiler.Evaluator.Root);
         }
     }
-    protected override object? RenderLine(IReadOnlyList<string> lines, int lineIndex, object? state)
+    protected object? RenderLine(IReadOnlyList<string> lines, int lineIndex, object? state)
     {
         Lexer lexer = new(new(lines[lineIndex]), Global);
         bool co = false;
-        foreach(var i in lexer.Lex())
+        foreach (SyntaxToken i in lexer.Lex())
         {
             if (!co)
             {

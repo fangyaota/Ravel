@@ -21,13 +21,13 @@ namespace Ravel.Values
         protected override void InvokeMust(NeoEvaluator evaluator, RavelObject[] obj)
         {
             evaluator.CurrentCallStack = new(evaluator.CurrentCallStack, Expression.Sentence);
-            var sco = evaluator.CurrentCallStack.Scope = new(Scope);
+            RavelScope sco = evaluator.CurrentCallStack.Scope = new(Scope);
             evaluator.CurrentCallStack.LastFunctionCall = evaluator.CurrentCallStack;
             for (int i = 0; i < Expression.Parameters.Count; i++)
             {
                 sco.TryDeclare(Expression.Parameters[i].Name, obj[i], false, false);
             }
-            sco.TryDeclare("self", RavelObject.GetFunction(this), true, false);
+            sco.TryDeclare("self", GetRavelObject(), true, false);
         }
     }
 }

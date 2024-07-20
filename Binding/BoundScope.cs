@@ -4,7 +4,7 @@ namespace Ravel.Binding
 {
     public sealed class BoundScope : IScope
     {
-        private IScope? parent;
+        private readonly IScope? parent;
         private Dictionary<string, lDeclare> Variables { get; } = new();
         public BoundScope(IScope? parent = null)
         {

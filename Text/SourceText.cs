@@ -23,7 +23,7 @@
                     upper = i;
                     continue;
                 }
-                if (Lines[i].EndIncludingLineBreaking <= position)
+                if (Lines[i].EndIncludingLineBreaking < position)
                 {
                     lower = i;
                     continue;

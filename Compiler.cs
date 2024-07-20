@@ -15,22 +15,22 @@ namespace Ravel
             Text = text;
             Global = global;
 
-            Source = new(text);
+            Source = new($"{{{Text}}}");
 
             _diagnostics = new(Source);
 
             Lexer = new(Source, Global);
-            var lex = Lexer.Lex().ToArray();
+            SyntaxToken[] lex = Lexer.Lex().ToArray();
 
             _diagnostics.AddRange(Lexer.Diagnostics);
 
             Parser = new(Source, lex, Global);
-            var parse = Parser.Parse();
+            SyntaxTree parse = Parser.Parse();
 
             _diagnostics.AddRange(Parser.Diagnostics);
 
             Binder = new(Source, parse, Global, scope);
-            var bound = Binder.Bind();
+            BoundProgram bound = Binder.Bind();
 
             _diagnostics.AddRange(Binder.Diagnostics);
 

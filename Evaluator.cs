@@ -1,6 +1,8 @@
 ﻿using Ravel.Binding;
 using Ravel.Values;
 
+using System.Collections;
+
 namespace Ravel
 {
 
@@ -18,19 +20,29 @@ namespace Ravel
         {
             Root = root.Expression;
             Global = global;
-            var s = scope ?? new(Global.Variables);
+            RavelScope s = scope ?? new(Global.Variables);
             CurrentCallStack = new(s, root.Expression);
         }
         internal NeoEvaluator(BoundExpression root, RavelGlobal global, RavelScope? scope = null)
         {
-            Root= root;
+            Root = root;
             Global = global;
-            var s = scope ?? new(Global.Variables);
+            RavelScope s = scope ?? new(Global.Variables);
             CurrentCallStack = new(s, root);
+        }
+        internal RavelObject EvaluateInstantResult(RavelCallStack last)
+        {
+            while (CurrentCallStack.Parent != last.Parent)
+            {
+                Step();
+            }
+            var l = CurrentCallStack.SonResults[^1];
+            CurrentCallStack = last;
+            return l;
         }
         public RavelObject Evaluate()
         {
-            while(!CalculateDone)
+            while (!CalculateDone)
             {
                 Step();
             }
@@ -84,8 +96,7 @@ namespace Ravel
         {
             if (CurrentCallStack.Parent != null)
             {
-                CurrentCallStack.Parent.SonResults.Add(result);
-                CurrentCallStack = CurrentCallStack.Parent;
+                CurrentCallStack = CurrentCallStack.Parent.AddSonResult(result);
             }
             else
             {
@@ -93,9 +104,13 @@ namespace Ravel
                 Result = result;
             }
         }
+        internal void AddResult(RavelObject result)
+        {
+            CurrentCallStack = CurrentCallStack.AddSonResult(result);
+        }
         private void EvaluateWhile(BoundWhileExpression @while)
         {
-            switch(CurrentCallStack.SonResults.Count)
+            switch (CurrentCallStack.SonResults.Count)
             {
                 case 0:
                     CurrentCallStack.Scope = new(CurrentCallStack.Scope);
@@ -112,7 +127,7 @@ namespace Ravel
                     }
                     break;
                 case 2:
-                    CurrentCallStack.SonResults.Clear();
+                    CurrentCallStack = CurrentCallStack.ClearSonResult();
                     CurrentCallStack = new(CurrentCallStack, @while.Condition);
                     break;
 
@@ -132,7 +147,7 @@ namespace Ravel
                     CurrentCallStack = new(CurrentCallStack, b ? @if.ExpTrue : @if.ExpFalse);
                     break;
                 case 2:
-                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    AddResultAndReturn(CurrentCallStack.SonResults[^1]);
                     break;
             }
         }
@@ -140,7 +155,7 @@ namespace Ravel
         private void EvaluateFunctionDefining(BoundFunctionDefiningExpression functionDefining)
         {
             RavelLambda function = new(functionDefining, CurrentCallStack.Scope, Global);
-            AddResultAndReturn(RavelObject.GetFunction(function));//?
+            AddResultAndReturn(function.GetRavelObject());//?
         }
 
         private void EvaluateDot(BoundDotExpression dot)
@@ -151,14 +166,14 @@ namespace Ravel
                     CurrentCallStack = new(CurrentCallStack, dot.Owner);
                     break;
                 case 1:
-                    var owner = CurrentCallStack.SonResults[0];
+                    RavelObject owner = CurrentCallStack.SonResults[0];
                     if (!owner.TryReturnSonValue(this, dot.Son))
                     {
                         throw new InvalidOperationException(dot.Son);
                     }
                     break;
                 case 2:
-                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    AddResultAndReturn(CurrentCallStack.SonResults[^1]);
                     break;
             }
         }
@@ -189,17 +204,17 @@ namespace Ravel
         private void EvaluateBlock(BoundBlockExpression block)
         {
             int resultCount = CurrentCallStack.SonResults.Count;
-            if(resultCount == 0)
+            if (resultCount == 0)
             {
                 CurrentCallStack.Scope = new(CurrentCallStack.Scope);
             }
             if (resultCount < block.Expressions.Count)
             {
-                CurrentCallStack = new(CurrentCallStack, block.Expressions.Last());
+                CurrentCallStack = new(CurrentCallStack, block.Expressions[resultCount]);
             }
             else
             {
-                AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                AddResultAndReturn(CurrentCallStack.SonResults[^1]);
             }
         }
 
@@ -209,18 +224,19 @@ namespace Ravel
             if (resultCount == 0)
             {
                 CurrentCallStack = new(CurrentCallStack, call.Function);
-            }else if(resultCount < call.Parameters.Count + 1)
+            }
+            else if (resultCount < call.Parameters.Count + 1)
             {
                 CurrentCallStack = new(CurrentCallStack, call.Parameters[resultCount - 1]);
             }
-            else if(resultCount == call.Parameters.Count + 1)
+            else if (resultCount == call.Parameters.Count + 1)
             {
-                var func = CurrentCallStack.SonResults[0];
+                RavelObject func = CurrentCallStack.SonResults[0];
                 func.Call(this, CurrentCallStack.SonResults.ToArray()[1..]);
             }
             else
             {
-                AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                AddResultAndReturn(CurrentCallStack.SonResults[^1]);
             }
         }
 
@@ -232,7 +248,7 @@ namespace Ravel
                     CurrentCallStack = new(CurrentCallStack, binary.Left);
                     break;
                 case 1:
-                    var left = CurrentCallStack.SonResults[0];
+                    RavelObject left = CurrentCallStack.SonResults[0];
                     switch (binary.Op.Kind)
                     {
                         case RavelBinaryOperatorKind.ShortCutAnd:
@@ -260,7 +276,7 @@ namespace Ravel
                     binary.Op.Function.Invoke(this, CurrentCallStack.SonResults[0], CurrentCallStack.SonResults[1]);
                     break;
                 case 3:
-                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    AddResultAndReturn(CurrentCallStack.SonResults[^1]);
                     break;
             }
         }
@@ -276,7 +292,7 @@ namespace Ravel
                     unary.Op.Function.Invoke(this, CurrentCallStack.SonResults[0]);
                     break;
                 case 2:
-                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    AddResultAndReturn(CurrentCallStack.SonResults[^1]);
                     break;
             }
         }
@@ -285,23 +301,24 @@ namespace Ravel
         {
             if (CurrentCallStack.Scope.TryGetVariable(variable.Name, out RavelVariable? value))
             {
-                var obj = value!.Object;
-                if (value.IsFunctionSelf)
+                RavelObject obj = value!.Object;
+                switch (CurrentCallStack.SonResults.Count)
                 {
-                    switch (CurrentCallStack.SonResults.Count)
-                    {
-                        case 0:
+                    case 0:
+                        if (value.IsFunctionSelf)
+                        {
                             obj.Call(this, Global.TypePool.Unit);
-                            break;
-                        case 1:
-                            AddResultAndReturn(CurrentCallStack.SonResults.Last());
-                            break;
-                    }
+                        }
+                        else
+                        {
+                            AddResultAndReturn(obj);
+                        }
+                        break;
+                    case 1:
+                        AddResultAndReturn(CurrentCallStack.SonResults[^1]);
+                        break;
                 }
-                else
-                {
-                    AddResultAndReturn(obj);
-                }
+
             }
             else
             {
@@ -317,11 +334,11 @@ namespace Ravel
                     CurrentCallStack = new(CurrentCallStack, defining.Expression);
                     break;
                 case 1:
-                    if (!CurrentCallStack.Scope.TryDeclare(defining.Declare.Name, CurrentCallStack.SonResults.Last(), false, false))
+                    if (!CurrentCallStack.Scope.TryDeclare(defining.Declare.Name, CurrentCallStack.SonResults[^1], false, false))
                     {
                         throw new InvalidOperationException();
                     }
-                    AddResultAndReturn(CurrentCallStack.SonResults.Last());
+                    AddResultAndReturn(CurrentCallStack.SonResults[^1]);
                     break;
             }
         }
@@ -330,28 +347,130 @@ namespace Ravel
         {
             AddResultAndReturn(num.Value);
         }
+
+
     }
     public class RavelCallStack
     {
         public RavelCallStack(RavelCallStack? parent, BoundExpression expression)
         {
             Parent = parent;
-            LastFunctionCall = parent?.LastFunctionCall;
+            LastFunctionCall = parent?.LastFunctionCall ?? this;
             Expression = expression;
             Scope = parent?.Scope ?? new();
         }
         public RavelCallStack(RavelScope scope, BoundExpression expression)
         {
             Parent = null;
-            LastFunctionCall = null;
+            LastFunctionCall = this;
             Expression = expression;
             Scope = scope;
         }
+        private RavelCallStack(RavelCallStack basis, RavelObject append)
+        {
+            Parent = basis.Parent;
+            LastFunctionCall = basis.LastFunctionCall;
+            Expression = basis.Expression;
+            Scope = basis.Scope;
+            SonResults = new(append, basis.SonResults);
+        }
+        private RavelCallStack(RavelCallStack basis)
+        {
+            Parent = basis.Parent;
+            LastFunctionCall = basis.LastFunctionCall;
+            Expression = basis.Expression;
+            Scope = basis.Scope;
+            SonResults = SingleLinkedList<RavelObject>.Empty;
+        }
         public RavelCallStack? Parent { get; }
-        public RavelCallStack? LastFunctionCall { get; internal set; }
+        public RavelCallStack LastFunctionCall { get; internal set; }
         public BoundExpression Expression { get; }
         public RavelScope Scope { get; internal set; }
 
-        public List<RavelObject> SonResults { get; } = new();
+        public SingleLinkedList<RavelObject> SonResults { get; } = SingleLinkedList<RavelObject>.Empty;
+
+        public RavelCallStack AddSonResult(RavelObject result)
+        {
+            return new(this, result);
+        }
+        public RavelCallStack ClearSonResult()
+        {
+            return new(this);
+        }
+    }
+    public class SingleLinkedList<T> : IReadOnlyList<T>
+    {
+        private T Value { get; }
+        public SingleLinkedList<T>? Next { get; }
+        public int Count { get; }
+
+        public T this[int index]
+        {
+            get
+            {
+                if (index >= Count)
+                {
+                    throw new IndexOutOfRangeException(nameof(index));
+                }
+                SingleLinkedList<T>? list = this;
+                for (int i = 0; i < Count - 1 - index; i++)
+                {
+                    list = list!.Next;
+                }
+                return list!.Value;
+            }
+        }
+        public T this[Index index]
+        {
+            get
+            {
+                return index.IsFromEnd ? this[Count - index.Value] : this[index.Value];
+            }
+        }
+        public static SingleLinkedList<T> Empty
+        {
+            get
+            {
+                return new();
+            }
+        }
+        public SingleLinkedList(T value, SingleLinkedList<T>? next = null)
+        {
+            Value = value;
+            if (next == null || next.Count == 0)
+            {
+                Next = null;
+                Count = 1;
+            }
+            else
+            {
+                Next = next;
+                Count = next.Count + 1;
+            }
+        }
+        private SingleLinkedList()
+        {
+            Value = default!;
+            Count = 0;
+        }
+        public IEnumerator<T> GetEnumerator()
+        {
+            return GetReversed().Reverse().GetEnumerator();
+        }
+
+        public IEnumerable<T> GetReversed()
+        {
+            SingleLinkedList<T>? list = this;
+            while (list != null)
+            {
+                yield return list.Value;
+                list = list.Next;
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 }

@@ -6,7 +6,7 @@ namespace Ravel.Values
 {
     public sealed class RavelScope : IScope, IEnumerable<RavelVariable>
     {
-        private RavelScope? parent;
+        private readonly RavelScope? parent;
         private Dictionary<string, RavelVariable> Variables { get; } = new();
         public RavelScope(RavelScope? parent = null)
         {
@@ -63,7 +63,7 @@ namespace Ravel.Values
 
         public BoundScope ToBound()
         {
-            BoundScope bound = new BoundScope(parent);
+            BoundScope bound = new(parent);
             foreach (KeyValuePair<string, RavelVariable> variable in Variables)
             {
                 bound[variable.Key] = variable.Value;
@@ -73,7 +73,7 @@ namespace Ravel.Values
 
         public IEnumerator<RavelVariable> GetEnumerator()
         {
-            if(parent == null)
+            if (parent == null)
             {
                 return Variables.Values.GetEnumerator();
             }

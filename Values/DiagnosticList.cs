@@ -3,7 +3,6 @@ using Ravel.Syntax;
 using Ravel.Text;
 
 using System.Collections;
-using System.Collections.Generic;
 
 namespace Ravel.Values
 {

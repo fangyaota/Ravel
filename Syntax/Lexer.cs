@@ -8,11 +8,11 @@ namespace Ravel.Syntax
 {
     public class Lexer
     {
-        private SourceText _text;
+        private readonly SourceText _text;
         private int _position;
 
         private int badStart;
-        private StringBuilder badText;
+        private readonly StringBuilder badText;
         private bool lastBad;
 
         private readonly DiagnosticList _diagnostics;
@@ -134,13 +134,13 @@ namespace Ravel.Syntax
             if (TakeTill(out _start, out _nowText, char.IsWhiteSpace))
             {
                 TryReport();
-                return new(SyntaxKind.WhiteSpace, _position, _nowText, RavelObject.GetString(_nowText, Global.TypePool));
+                return new(SyntaxKind.WhiteSpace, _position, _nowText, Global.TypePool.StringType.GetRavelObject(_nowText));
             }
             //syntax
             if (TakeContains(out _start, out _nowText, out SyntaxKind syntax))
             {
                 TryReport();
-                return new(syntax, _start, _nowText, RavelObject.GetString(_nowText, Global.TypePool));
+                return new(syntax, _start, _nowText, Global.TypePool.StringType.GetRavelObject(_nowText));
             }
             //digit
             if (TakeTill(out _start, out _nowText, char.IsDigit))
@@ -150,15 +150,15 @@ namespace Ravel.Syntax
                     _diagnostics.ReportInvalidLiteral(_nowText, _start);
                 }
                 TryReport();
-                return new(SyntaxKind.Integer, _start, _nowText, RavelObject.GetInteger(num, Global.TypePool));
+                return new(SyntaxKind.Integer, _start, _nowText, Global.TypePool.IntType.GetRavelObject(num));
             }
             //string
             if (Current == '"')
             {
                 Next();
                 TakeTill(out _start, out _nowText, ch => ch is not ('"' or '\n' or '\r'));
-                var real = '"' + _nowText;
-                
+                string real = '"' + _nowText;
+
                 if (Current != '"')
                 {
                     _diagnostics.ReportStringNotEnding(_start - 1, _position);
@@ -169,7 +169,7 @@ namespace Ravel.Syntax
                     real += '"';
                 }
                 TryReport();
-                return new(SyntaxKind.String, _start - 1, real, RavelObject.GetString(_nowText, Global.TypePool));
+                return new(SyntaxKind.String, _start - 1, real, Global.TypePool.StringType.GetRavelObject(_nowText));
             }
             //identity
             if (TakeTill(out _start, out _nowText, ch => char.IsLetter(ch) || ch == '_'))
@@ -180,7 +180,7 @@ namespace Ravel.Syntax
                 //{
                 //    return new(kind, _start, _nowText, RavelObject.GetBoolean(bool.Parse(_nowText), Global.TypePool));
                 //}
-                return new(kind, _start, _nowText, RavelObject.GetString(_nowText, Global.TypePool));
+                return new(kind, _start, _nowText, Global.TypePool.StringType.GetRavelObject(_nowText));
             }
 
             if (!lastBad)
@@ -190,7 +190,7 @@ namespace Ravel.Syntax
             badText.Append(Current);
             lastBad = true;
 
-            return new(SyntaxKind.BadToken, _position++, Last.ToString(), RavelObject.GetString(Last.ToString(), Global.TypePool));
+            return new(SyntaxKind.BadToken, _position++, Last.ToString(), Global.TypePool.StringType.GetRavelObject(Last.ToString()));
         }
     }
 }

@@ -15,10 +15,10 @@ namespace Ravel.Values
 
         public override RavelType GetRavelType(NeoEvaluator evaluator, params RavelType[] genericTypes)
         {
-            var name = GetSpecificName(genericTypes);
-            if (!TypePool.TypeMap.TryGetValue(name, out var type))
+            string name = GetSpecificName(genericTypes);
+            if (!TypePool.TypeMap.TryGetValue(name, out RavelType? type))
             {
-                type = RealFunction.InvokeReal(evaluator, genericTypes.Select(RavelObject.GetType).ToArray()).GetValue<RavelType>();
+                type = RealFunction.InvokeReal(evaluator, genericTypes.Select(TypePool.TypeType.GetRavelObject).ToArray()).GetValue<RavelType>();
             }
             return type;
         }

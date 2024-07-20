@@ -1,11 +1,5 @@
 ﻿using Ravel.Binding;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Ravel.Rewrite
 {
     internal class Rewriter
@@ -44,9 +38,9 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteAs(BoundAsExpression asExp)
         {
-            var e = Rewrite(asExp.Left);
-            var type = Rewrite(asExp.Right);
-            if((e, type) == (asExp.Left, asExp.Right))
+            BoundExpression e = Rewrite(asExp.Left);
+            BoundExpression type = Rewrite(asExp.Right);
+            if ((e, type) == (asExp.Left, asExp.Right))
             {
                 return asExp;
             }
@@ -55,8 +49,8 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteWhile(BoundWhileExpression @while)
         {
-            var cond = Rewrite(@while.Condition);
-            var expTrue = Rewrite(@while.Expression);
+            BoundExpression cond = Rewrite(@while.Condition);
+            BoundExpression expTrue = Rewrite(@while.Expression);
             if ((cond, expTrue) == (@while.Condition, @while.Expression))
             {
                 return @while;
@@ -66,9 +60,9 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteIf(BoundIfExpression @if)
         {
-            var cond = Rewrite(@if.Condition);
-            var expTrue = Rewrite(@if.ExpTrue);
-            var expFalse = Rewrite(@if.ExpFalse);
+            BoundExpression cond = Rewrite(@if.Condition);
+            BoundExpression expTrue = Rewrite(@if.ExpTrue);
+            BoundExpression expFalse = Rewrite(@if.ExpFalse);
             if ((cond, expTrue, expFalse) == (@if.Condition, @if.ExpTrue, @if.ExpFalse))
             {
                 return @if;
@@ -78,8 +72,8 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteFunctionDefining(BoundFunctionDefiningExpression functionDefining)
         {
-            var sentence = Rewrite(functionDefining.Sentence);
-            if(sentence == functionDefining.Sentence)
+            BoundExpression sentence = Rewrite(functionDefining.Sentence);
+            if (sentence == functionDefining.Sentence)
             {
                 return functionDefining;
             }
@@ -88,8 +82,8 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteDot(BoundDotExpression dot)
         {
-            var owner = Rewrite(dot.Owner);
-            if(owner == dot.Owner)
+            BoundExpression owner = Rewrite(dot.Owner);
+            if (owner == dot.Owner)
             {
                 return dot;
             }
@@ -100,10 +94,10 @@ namespace Ravel.Rewrite
         {
             List<BoundExpression> expressions = new();
             bool diff = false;
-            foreach(var sent in block.Expressions)
+            foreach (BoundExpression sent in block.Expressions)
             {
                 BoundExpression item = Rewrite(sent);
-                if(item != sent)
+                if (item != sent)
                 {
                     diff = true;
                 }
@@ -120,7 +114,7 @@ namespace Ravel.Rewrite
         {
             List<BoundExpression> expressions = new();
             bool diff = false;
-            foreach (var sent in call.Parameters)
+            foreach (BoundExpression sent in call.Parameters)
             {
                 BoundExpression item = Rewrite(sent);
                 if (item == sent)
@@ -129,7 +123,7 @@ namespace Ravel.Rewrite
                 }
                 expressions.Add(item);
             }
-            var func = Rewrite(call.Function);
+            BoundExpression func = Rewrite(call.Function);
             if (func != call.Function)
             {
                 diff = true;
@@ -143,9 +137,9 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteBinary(BoundBinaryExpression binary)
         {
-            var l = Rewrite(binary.Left);
-            var r = Rewrite(binary.Right);
-            if((l, r) == (binary.Left, binary.Right))
+            BoundExpression l = Rewrite(binary.Left);
+            BoundExpression r = Rewrite(binary.Right);
+            if ((l, r) == (binary.Left, binary.Right))
             {
                 return binary;
             }
@@ -154,8 +148,8 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteUnary(BoundUnaryExpression unary)
         {
-            var o = Rewrite(unary.Operand);
-            if(o == unary.Operand)
+            BoundExpression o = Rewrite(unary.Operand);
+            if (o == unary.Operand)
             {
                 return unary;
             }
@@ -169,8 +163,8 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteDefining(BoundDefiningExpression defining)
         {
-            var exp = Rewrite(defining.Expression);
-            if(exp == defining.Expression)
+            BoundExpression exp = Rewrite(defining.Expression);
+            if (exp == defining.Expression)
             {
                 return defining;
             }
@@ -179,7 +173,7 @@ namespace Ravel.Rewrite
 
         protected virtual BoundExpression RewriteAssignment(BoundAssignmentExpression assignment)
         {
-            var exp = Rewrite(assignment.Expression);
+            BoundExpression exp = Rewrite(assignment.Expression);
             if (exp == assignment.Expression)
             {
                 return assignment;

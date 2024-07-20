@@ -11,7 +11,7 @@ namespace Ravel.Syntax
         public Parser(SourceText text, SyntaxToken[] tokens, RavelGlobal global)
         {
             Tokens = new();
-            for(int i = 0; i < tokens.Length; i++)
+            for (int i = 0; i < tokens.Length; i++)
             {
                 if (tokens[i].Kind is SyntaxKind.Sharp)
                 {
@@ -91,7 +91,7 @@ namespace Ravel.Syntax
         private CompilationUnitSyntax ParseCompilationUnit()
         {
             ExpressionSyntax expression = ParseStatement();
-            while(Current.Kind == SyntaxKind.EndOfLine)
+            while (Current.Kind == SyntaxKind.EndOfLine)
             {
                 NextToken();
             }
@@ -143,15 +143,12 @@ namespace Ravel.Syntax
         }
         private ExpressionSyntax ParseSingleton(int parentPrecedence = 0)//?
         {
-            switch (Current.Kind)
+            return Current.Kind switch
             {
-                case SyntaxKind.If:
-                    return ParseIf();
-                case SyntaxKind.While:
-                    return ParseWhile();
-                default:
-                    return ParseBinary(parentPrecedence);
-            }
+                SyntaxKind.If => ParseIf(),
+                SyntaxKind.While => ParseWhile(),
+                _ => ParseBinary(parentPrecedence),
+            };
         }
 
         private ExpressionSyntax ParseWhile()
@@ -166,7 +163,7 @@ namespace Ravel.Syntax
         {
 
             ExpressionSyntax left = ParseUnary(parentPrecedence);
-            List<ExpressionSyntax> expressions = new ();
+            List<ExpressionSyntax> expressions = new();
             List<SyntaxToken> operators = new();
             expressions.Add(left);
             OperatorDirection lastDirection = OperatorDirection.None;
@@ -184,7 +181,7 @@ namespace Ravel.Syntax
                 if (binaryPrecedence > parentPrecedence)
                 {
                     SyntaxToken bi = NextToken();
-                    var rig = ParseSingleton(binaryPrecedence);
+                    ExpressionSyntax rig = ParseSingleton(binaryPrecedence);
                     expressions[^1] = new BinaryExpressionSyntax(expressions[^1], bi, rig);
                     continue;
                 }
@@ -192,9 +189,9 @@ namespace Ravel.Syntax
                 ExpressionSyntax right = ParseSingleton(binaryPrecedence);
                 expressions.Add(right);
                 operators.Add(binaryOperator);
-                var nowDirection = Global.SyntaxFacts.GetBinaryOperatorDirection(binaryOperator.Kind);
+                OperatorDirection nowDirection = Global.SyntaxFacts.GetBinaryOperatorDirection(binaryOperator.Kind);
 
-                if(lastDirection != nowDirection && lastDirection != OperatorDirection.None)
+                if (lastDirection != nowDirection && lastDirection != OperatorDirection.None)
                 {
                     _diagnostics.ReportDirectionNotSame(binaryOperator, lastDirection);
                 }
@@ -205,7 +202,7 @@ namespace Ravel.Syntax
                 case OperatorDirection.Left:
                     {
                         ExpressionSyntax main = expressions.First();
-                        for (var i = 1; i < expressions.Count; i++)
+                        for (int i = 1; i < expressions.Count; i++)
                         {
                             main = new BinaryExpressionSyntax(main, operators[i - 1], expressions[i]);
                         }
@@ -214,7 +211,7 @@ namespace Ravel.Syntax
                 case OperatorDirection.Right:
                     {
                         ExpressionSyntax main = expressions.Last();
-                        for (var i = expressions.Count - 2; i >= 0; i--)
+                        for (int i = expressions.Count - 2; i >= 0; i--)
                         {
                             main = new BinaryExpressionSyntax(expressions[i], operators[i], main);
                         }
@@ -237,10 +234,10 @@ namespace Ravel.Syntax
             }
             if (Current.Kind != SyntaxKind.Equal && !Current.Kind.IsEndOrLine())
             {
-                var expr = ParseSingleton();
+                ExpressionSyntax expr = ParseSingleton();
                 return new DeclareExpressionSyntax(variable, colon, tokens, expr);
             }
-            if(mustHaveType && !haserror)
+            if (mustHaveType && !haserror)
             {
                 _diagnostics.ReportFunctionParameterNoType(variable);
             }
@@ -249,7 +246,7 @@ namespace Ravel.Syntax
         private ExpressionSyntax ParseDefining()
         {
             DeclareExpressionSyntax declare = ParseDeclare();
-            if(Current.Kind is not SyntaxKind.Equal)
+            if (Current.Kind is not SyntaxKind.Equal)
             {
                 return declare;
             }
@@ -315,7 +312,7 @@ namespace Ravel.Syntax
         }
         private ExpressionSyntax ParseBlock()
         {
-            List<ExpressionSyntax> l = new List<ExpressionSyntax>();
+            List<ExpressionSyntax> l = new();
             SyntaxToken open = MatchToken(SyntaxKind.OpenBrace);
             while (Current.Kind is SyntaxKind.EndOfLine)
             {
@@ -375,7 +372,7 @@ namespace Ravel.Syntax
                 _position += offset;
                 return new LiteralExpressionSyntax(new(SyntaxKind.None, start, "()", Global.TypePool.Unit));
             }
-            if (Peek(offset).Kind is SyntaxKind.EqualLarge or SyntaxKind.MinusLarge)
+            if (Peek(offset).Kind is SyntaxKind.EqualLarge or SyntaxKind.Colon)
             {
                 return ParseFunctionDefining();
             }
@@ -385,7 +382,7 @@ namespace Ravel.Syntax
         {
 
             SyntaxToken left = MatchToken(SyntaxKind.OpenHesis);
-            List<DeclareExpressionSyntax> paramList = new List<DeclareExpressionSyntax>();
+            List<DeclareExpressionSyntax> paramList = new();
             while (!Current.Kind.IsEnd())
             {
                 DeclareExpressionSyntax declare = ParseDeclare(true);
@@ -397,20 +394,20 @@ namespace Ravel.Syntax
             {
                 _diagnostics.ReportFunctionNoParameters(right.Span);
             }
-            SyntaxToken? minusLarge = null;
+            SyntaxToken? colon = null;
             SyntaxToken? typeIdentifier = null;
-            if (Current.Kind is SyntaxKind.MinusLarge)
+            if (Current.Kind is SyntaxKind.Colon)
             {
-                minusLarge = MatchToken(ref hasError, SyntaxKind.MinusLarge);
+                colon = MatchToken(ref hasError, SyntaxKind.Colon);
                 typeIdentifier = MatchToken(ref hasError, SyntaxKind.Variable);
             }
             SyntaxToken equalLarge = MatchToken(ref hasError, SyntaxKind.EqualLarge);
             ExpressionSyntax sentence = ParseSentence();
-            return new FunctionDefiningExpressionSyntax(left, paramList, right, minusLarge, typeIdentifier, equalLarge, sentence);
+            return new FunctionDefiningExpressionSyntax(left, paramList, right, colon, typeIdentifier, equalLarge, sentence);
         }
         private ExpressionSyntax ParsePrimary()
         {
-            var start = _position;
+            int start = _position;
         primary:
             switch (Current.Kind)
             {

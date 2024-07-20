@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace Ravel.Values
+﻿namespace Ravel.Values
 {
     public readonly struct RavelObject
     {
@@ -19,51 +17,23 @@ namespace Ravel.Values
         {
             return new(null!, typePool.VoidType, typePool);
         }
-        public static RavelObject GetInteger(BigInteger integer, RavelTypePool typePool)
-        {
-            return new RavelObject(integer, typePool.IntType, typePool);
-        }
-        internal static RavelObject GetBoolean(bool boolean, RavelTypePool typePool)
-        {
-            return new RavelObject(boolean, typePool.BoolType, typePool);
-        }
-        public static RavelObject GetString(string str, RavelTypePool typePool)
-        {
-            return new RavelObject(str, typePool.StringType, typePool);
-        }
-        public static RavelObject GetFunction(RavelFunction value)
-        {
-            return new(value, value.Type, value.TypePool);//?
-        }
-        public static RavelObject GetType(RavelType type)
-        {
-            return new(type, type.TypePool.TypeType, type.TypePool);
-        }
-        public static RavelObject GetRawObject(object obj, RavelTypePool typePool)
-        {
-            return new(obj, typePool.GetMappedType(obj.GetType()), typePool);
-        }
         public T GetValue<T>()
         {
-            if (Value is T)
-            {
-                return (T)Value;
-            }
-            throw new InvalidCastException($"cast from {Type} to {typeof(T).Name}");
+            return Value is T v ? v : throw new InvalidCastException($"cast from {Type} to {typeof(T).Name}");
         }
         public bool TryReturnSonValue(NeoEvaluator evaluator, string name)
         {
-            
+
             if (SonValues.TryGetValue(name, out RavelObject value))
             {
-                evaluator.CurrentCallStack.SonResults.Add(value);
+                evaluator.AddResult(value);
                 return true;
             }
             if (!Type.TryGetSonVariable(name, out RavelVariable? variable))
             {
                 return false;
             }
-            var obj = variable!.Object;
+            RavelObject obj = variable!.Object;
             if (variable!.IsFunctionSelf)
             {
                 obj.Call(evaluator, this);

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 namespace Ravel.Values
 {
     public sealed class RavelGlobal
@@ -9,53 +8,78 @@ namespace Ravel.Values
             SyntaxFacts = new();
 
             TypePool = new();
-            
+
             RavelType OT = TypePool.GetFuncType(TypePool.TypeType, TypePool.ObjectType);
             RavelRealFunction typeOf = new(TypePool.ObjectTypeOf, OT, true);
 
             RavelType III = TypePool.GetFuncType(TypePool.IntType, TypePool.IntType, TypePool.IntType);
             RavelRealFunction add = new(TypePool.IntAdd, III, true);
 
-            var US = TypePool.GetFuncType(TypePool.StringType, TypePool.VoidType);
+            RavelType US = TypePool.GetFuncType(TypePool.StringType, TypePool.VoidType);
             RavelRealFunction input = new(VoidInput, US, false);
 
-            var OU = TypePool.GetFuncType(TypePool.VoidType, TypePool.StringType);
-            RavelRealFunction print = new(VoidPrint, OU, false);
+            RavelType SU = TypePool.GetFuncType(TypePool.VoidType, TypePool.StringType);
+            RavelRealFunction print = new(VoidPrint, SU, false);
 
             RavelRealFunction randint = new(Randint, III, false);
 
-            var TT = TypePool.GetFuncType(TypePool.ObjectType, TypePool.TypeType);
+            RavelType TT = TypePool.GetFuncType(TypePool.ObjectType, TypePool.TypeType);
+
+            RavelType OU = TypePool.GetFuncType(TypePool.VoidType, TypePool.ObjectType);
+
+            RavelType OU_C = TypePool.GetFuncType(TypePool.ObjectType, OU);
+
+            RavelType OU_C_C = TypePool.GetFuncType(TypePool.ObjectType, OU_C);
+
+            RavelRealFunction callcc = new(Callcc, OU_C_C, false);
 
             Variables = new(TypePool.SystemScope)
             {
-                new(RavelObject.GetFunction(typeOf), "typeof", true, true),
-                new(RavelObject.GetFunction(add), "add", false, false),
-                new(RavelObject.GetFunction(input), "input", false, true, true),
-                new(RavelObject.GetFunction(print), "print", false, true),
-                new(RavelObject.GetFunction(randint), "randint", false, true),
-                new(RavelObject.GetFunction(TypePool.ListConstructor.Function), "list", true, true),
+                new(typeOf.GetRavelObject(), "typeof", true, true),
+                new(add.GetRavelObject(), "add", false, false),
+                new(input.GetRavelObject(), "input", false, true, true),
+                new(print.GetRavelObject(), "print", false, true),
+                new(randint.GetRavelObject(), "randint", false, true),
+                new(TypePool.ListConstructor.Function.GetRavelObject(), "list", true, true),
+                new(callcc.GetRavelObject(), "callcc", false, true),
             };
         }
         public RavelSyntaxFacts SyntaxFacts { get; }
         public RavelTypePool TypePool { get; }
         public RavelScope Variables { get; }
 
-        RavelObject VoidInput(NeoEvaluator evaluator, RavelObject obj)
+        private RavelObject VoidInput(NeoEvaluator evaluator, RavelObject obj)
         {
-            return RavelObject.GetString(Console.ReadLine()!, TypePool);
+            return TypePool.StringType.GetRavelObject(Console.ReadLine()!);
         }
-        RavelObject VoidPrint(NeoEvaluator evaluator, RavelObject obj)
+
+        private RavelObject VoidPrint(NeoEvaluator evaluator, RavelObject obj)
         {
             Console.WriteLine(obj);
             return TypePool.Unit;
         }
 
-        Random? random;
-        RavelObject Randint(NeoEvaluator evaluator, RavelObject min, RavelObject max)
+        private Random? random;
+
+        private RavelObject Randint(NeoEvaluator evaluator, RavelObject min, RavelObject max)
         {
             random ??= new();
-            return RavelObject.GetInteger(random.NextInt64((long)min.GetValue<BigInteger>(), (long)max.GetValue<BigInteger>()), TypePool);
+            return TypePool.IntType.GetRavelObject(random.NextInt64((long)min.GetValue<BigInteger>(), (long)max.GetValue<BigInteger>()));
         }
 
+        private RavelObject Callcc(NeoEvaluator evaluator, RavelObject function)
+        {
+            var current = evaluator.CurrentCallStack;
+            RavelObject Return(NeoEvaluator evaluator, RavelObject result)
+            {
+                evaluator.CurrentCallStack = current;
+                evaluator.AddResult(result);
+                return TypePool.Unit;
+            }
+            RavelType OU = TypePool.GetFuncType(TypePool.VoidType, TypePool.ObjectType);
+            RavelRealFunction ret = new(Return, OU, false);
+            function.Call(evaluator, ret.GetRavelObject());
+            return evaluator.EvaluateInstantResult(current);
+        }
     }
 }

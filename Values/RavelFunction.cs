@@ -17,13 +17,16 @@ namespace Ravel.Values
             RealParameters = type.GetFuncParameters(realParameterCount).ToArray();
             ResultType = type.GetTypeWhenCall(realParameterCount);
         }
-
+        public RavelObject GetRavelObject()
+        {
+            return new(this, Type, TypePool);
+        }
         public void Invoke(NeoEvaluator evaluator, params RavelObject[] obj)
         {
             if (obj.Length < RealParameters.Length)
             {
                 RavelType newType = TypePool.GetFuncType(ResultType, RealParameters[obj.Length..]);
-                evaluator.AddResultAndReturn(RavelObject.GetFunction(new RavelParcialFunction(this, obj, newType)));
+                evaluator.AddResult(new RavelParcialFunction(this, obj, newType).GetRavelObject());
                 return;
             }
             if (obj.Length == RealParameters.Length)
@@ -31,10 +34,10 @@ namespace Ravel.Values
                 InvokeMust(evaluator, obj);
                 return;
             }
-            var functionExp = new BoundLiteralExpression(RavelObject.GetFunction(this));
-            var formerParamExp = obj[..RealParameters.Length].Select(x => (BoundExpression)new BoundLiteralExpression(x)).ToList();
-            var latterParamExp = obj[RealParameters.Length..].Select(x => (BoundExpression)new BoundLiteralExpression(x)).ToList();
-            var expression = new BoundFunctionCallExpression(new BoundFunctionCallExpression(functionExp, formerParamExp), latterParamExp);
+            BoundLiteralExpression functionExp = new(GetRavelObject());
+            List<BoundExpression> formerParamExp = obj[..RealParameters.Length].Select(x => (BoundExpression)new BoundLiteralExpression(x)).ToList();
+            List<BoundExpression> latterParamExp = obj[RealParameters.Length..].Select(x => (BoundExpression)new BoundLiteralExpression(x)).ToList();
+            BoundFunctionCallExpression expression = new(new BoundFunctionCallExpression(functionExp, formerParamExp), latterParamExp);
 
             evaluator.CurrentCallStack = new(evaluator.CurrentCallStack, expression);
         }

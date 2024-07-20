@@ -32,9 +32,9 @@ namespace Ravel.Binding
         {
             if (Tree.Diagnostics.Any())
             {
-                return new( new BoundLiteralExpression(Global.TypePool.Unit));
+                return new(new BoundLiteralExpression(Global.TypePool.Unit));
             }
-            return new( BindExpression(Tree.Root.Expression));
+            return new(BindExpression(Tree.Root.Expression));
         }
         private BoundExpression BindExpression(ExpressionSyntax syntax)
         {
@@ -63,7 +63,7 @@ namespace Ravel.Binding
         private BoundExpression BindDeclareExpression(DeclareExpressionSyntax declare)
         {
             _diagnostics.ReportNotSupportedYet(declare.Span);
-            if (!BindDefining(declare, out var ravelType))
+            if (!BindDefining(declare, out RavelType? ravelType))
             {
                 return new BoundErrorExpression();
             }
@@ -89,7 +89,7 @@ namespace Ravel.Binding
             BoundExpression expr = BindExpression(@while.Expression);
             _scope = s;
 
-            if(expr is BoundErrorExpression)
+            if (expr is BoundErrorExpression)
             {
                 return expr;
             }
@@ -112,7 +112,7 @@ namespace Ravel.Binding
 
             Dictionary<int, RavelDefining> parameters = new();
 
-            if(function is BoundErrorExpression)
+            if (function is BoundErrorExpression)
             {
                 return function;
             }
@@ -187,7 +187,7 @@ namespace Ravel.Binding
             BoundExpression expFalse = BindExpression(@if.ExpFalse);
             _scope = s;
 
-            if(expTrue is BoundErrorExpression)
+            if (expTrue is BoundErrorExpression)
             {
                 return expTrue;
             }
@@ -215,7 +215,7 @@ namespace Ravel.Binding
                 return true;
             }
             BoundExpression type = BindExpression(defining.Type);
-            if(type is BoundErrorExpression or BoundDeclareExpression)
+            if (type is BoundErrorExpression or BoundDeclareExpression)
             {
                 return false;
             }
@@ -230,7 +230,7 @@ namespace Ravel.Binding
                 return false;
             }
 
-            
+
 
             RavelObject result = new NeoEvaluator(type, Global).Evaluate();//?
 
@@ -239,7 +239,7 @@ namespace Ravel.Binding
             {
                 return true;
             }
-            
+
             if (!ravelType.IsSonOrEqual(matchType))
             {
                 _diagnostics.ReportTypeNotMatching(defining.Span, matchType, ravelType);
@@ -332,7 +332,7 @@ namespace Ravel.Binding
 
         private BoundExpression BindBlockExpression(BlockSyntax syntax)
         {
-            List<BoundExpression> l = new List<BoundExpression>();
+            List<BoundExpression> l = new();
             BoundScope p = _scope;
             _scope = new(_scope);
             foreach (ExpressionSyntax i in syntax.Statements)
@@ -340,7 +340,7 @@ namespace Ravel.Binding
                 l.Add(BindExpression(i));
             }
             _scope = p;
-            if(l.Count == 0)
+            if (l.Count == 0)
             {
                 return new BoundLiteralExpression(Global.TypePool.Unit);
             }
@@ -369,7 +369,7 @@ namespace Ravel.Binding
                 _diagnostics.ReportParametersTooMany(syntax.Function, paramList.Count, max);
                 return func;
             }
-            if(paramList.Any(x => x is BoundErrorExpression))
+            if (paramList.Any(x => x is BoundErrorExpression))
             {
                 return new BoundErrorExpression();
             }
@@ -391,13 +391,13 @@ namespace Ravel.Binding
         {
             string name = syntax.Declare.Identifier.Text;
             BoundExpression expression = BindExpression(syntax.Expression);
-            if(expression is BoundErrorExpression)
+            if (expression is BoundErrorExpression)
             {
                 return expression;
             }
             if (syntax.Declare.Type == null)
             {
-                RavelDefining define = new RavelDefining(expression.Type, name, false, false);
+                RavelDefining define = new (expression.Type, name, false, false);
                 if (!_scope.TryDeclare(name, expression.Type, false, false))
                 {
                     _diagnostics.ReportVariableAlreadyExists(syntax.Declare);
@@ -409,7 +409,7 @@ namespace Ravel.Binding
             {
                 return expression;
             }
-            RavelDefining defined = new RavelDefining(real!, name, false, false);
+            RavelDefining defined = new(real!, name, false, false);
             if (!_scope.TryDeclare(name, expression.Type, false, false))
             {
                 _diagnostics.ReportVariableAlreadyExists(syntax.Declare);
@@ -441,7 +441,7 @@ namespace Ravel.Binding
         {
             BoundExpression left = BindExpression(syntax.Left);
             BoundExpression right = BindExpression(syntax.Right);
-            if(left is BoundErrorExpression || right is BoundErrorExpression)
+            if (left is BoundErrorExpression || right is BoundErrorExpression)
             {
                 return new BoundErrorExpression();
             }
@@ -451,12 +451,12 @@ namespace Ravel.Binding
                 _diagnostics.ReportOperatorNotDefined(left, syntax, right);
                 return left;
             }
-            if(oper.SyntaxKind == SyntaxKind.As)
+            if (oper.SyntaxKind == SyntaxKind.As)
             {
-                if(right.IsConst)
+                if (right.IsConst)
                 {
-                    var temp_evaluator = new NeoEvaluator(right, Global);//?
-                    var result_type = temp_evaluator.Evaluate().GetValue<RavelType>();
+                    NeoEvaluator temp_evaluator = new(right, Global);//?
+                    RavelType result_type = temp_evaluator.Evaluate().GetValue<RavelType>();
                     return new BoundAsExpression(left, oper, right, result_type);
                 }
             }
@@ -466,7 +466,7 @@ namespace Ravel.Binding
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
         {
             BoundExpression operand = BindExpression(syntax.Operand);
-            if(operand is BoundErrorExpression)
+            if (operand is BoundErrorExpression)
             {
                 return operand;
             }

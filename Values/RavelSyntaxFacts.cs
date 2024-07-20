@@ -128,15 +128,15 @@ namespace Ravel.Values
         public int LongestLength { get; }
         public int GetUnaryOperatorPrecedence(SyntaxKind kind)
         {
-            return UnaryOperatorPrecedence.TryGetValue(kind, out var result) ? result : 0;
+            return UnaryOperatorPrecedence.TryGetValue(kind, out int result) ? result : 0;
         }
         public int GetBinaryOperatorPrecedence(SyntaxKind kind)
         {
-            return BinaryOperatorPrecedence.TryGetValue(kind, out var result) ? result : 0;
+            return BinaryOperatorPrecedence.TryGetValue(kind, out int result) ? result : 0;
         }
         public OperatorDirection GetBinaryOperatorDirection(SyntaxKind kind)
         {
-            return BinaryOperatorDirection.TryGetValue(kind, out var result) ? result : OperatorDirection.Left;
+            return BinaryOperatorDirection.TryGetValue(kind, out OperatorDirection result) ? result : OperatorDirection.Left;
         }
         public SyntaxKind GetKeywordKind(string text)
         {
