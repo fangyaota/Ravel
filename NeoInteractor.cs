@@ -56,9 +56,9 @@ public class NeoInteractor
     public string GetText()
     {
         StringBuilder sb = new();
-        sb.Append('(');
+        sb.Append("\n(");
         sb.AppendJoin('\n', Lines);
-        sb.Append(").ToString");
+        sb.Append("\n).ToString");
         return sb.ToString();
     }
     public void FlushRenderedLine(int index)
@@ -138,6 +138,13 @@ public class NeoInteractor
         }
         sb.AppendLine();
         RenderedLines[index] = sb.ToString();
+    }
+    public void FlushRenderedLineAll()//?
+    {
+        for (int i = 0; i < Lines.Count; i++)
+        {
+            FlushRenderedLine(i);
+        }
     }
     public string GetRenderText(int middle)
     {
@@ -224,20 +231,25 @@ public class NeoInteractor
     }
     private void Interact()
     {
+        int index = 0;
         Dictionary<int, (string description, Action action)> map = new()
         {
-            [0] = ("编辑", DynamicInput),
-            [1] = ("编译", EvaluateTryCompile),
-            [2] = ("显示作者", EvaluateShowRavel),
-            [3] = ("开关自动对齐", EvaluateShowAutoTab),
-            [4] = ("开关解析树显示", EvaluateShowSyntaxTree),
-            [5] = ("开关绑定树显示", EvaluateShowProgramTree),
-            [6] = ("开关结果显示", EvaluateOutPut),
-            [7] = ("退出", EvaluateExit),
+            [index++] = ("编辑", DynamicInput),
+            [index++] = ("编译", EvaluateTryCompile),
+            [index++] = ("读取", EvaluateLoad),
+            [index++] = ("保存", EvaluateSave),
+            [index++] = ("退出", EvaluateExit),
+            [index++] = ("作者", EvaluateShowRavel),
+            [index++] = ("开关自动对齐", EvaluateShowAutoTab),
+            [index++] = ("开关解析树显示", EvaluateShowSyntaxTree),
+            [index++] = ("开关绑定树显示", EvaluateShowProgramTree),
+            [index++] = ("开关结果显示", EvaluateOutPut),
         };
         var prompt = new SelectionPrompt<int>()
             .Title("------主菜单------")
             .EnableSearch()
+            .PageSize(6)
+            .MoreChoicesText("[grey]（往下滑获取更多选项）[/]")
             .SearchPlaceholderText("[grey]（输入序号快速跳转：）[/]")
             .UseConverter( x => $"{x}: {map[x].description}")
             .AddChoices(map.Keys);
@@ -250,6 +262,51 @@ public class NeoInteractor
         }
 
         
+    }
+
+    private void EvaluateLoad()
+    {
+        string path = AnsiConsole.Ask("选择代码文件", "temp.ravel");
+        FileInfo file = new(path);
+        if (!file.Exists)
+        {
+            AnsiConsole.MarkupLine($"[red]错误：文件<{file.Name}>不存在[/]");
+        }
+        else
+        {
+            int index = Paras.Count - 1;
+            while (true)
+            {
+                AnsiConsole.Ask("输入插入页码", index);
+                if (0 <= index && index < Paras.Count)
+                {
+                    break;
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[red]错误：页码不合规[/]");
+                }
+            }
+            Paras.Insert(index, File.ReadAllLines(path).ToList());
+            if (index == Cursor_z)
+            {
+                FlushRenderedLineAll();
+            }
+            AnsiConsole.MarkupLine($"已加载至[purple]第{index}页[/]");
+        }
+        Pause();
+    }
+    private void EvaluateSave()
+    {
+        string path = AnsiConsole.Ask("选择代码文件", "temp.ravel");
+        FileInfo file = new(path);
+        if (file.Exists)
+        {
+            AnsiConsole.MarkupLine($"[yellow]警告：文件<{file.Name}>已存在,正在删除...[/]");
+        }
+        File.WriteAllLines(path, Lines);
+        AnsiConsole.MarkupLine($"已保存[purple]第{Cursor_z}页[/]");
+        Pause();
     }
 
     private static void EvaluateExit()
@@ -394,10 +451,7 @@ public class NeoInteractor
                 Cursor_y = 0;
                 Cursor_z--;
                 CursorClamp();
-                for (int i = 0; i < Lines.Count; i++)
-                {
-                    FlushRenderedLine(i);
-                }
+                FlushRenderedLineAll();
                 return true;
             case ConsoleKey.PageDown:
                 if(Cursor_z == Paras.Count - 1 && Lines.Count != 0)
@@ -408,10 +462,7 @@ public class NeoInteractor
                 Cursor_y = 0;
                 Cursor_z++;
                 CursorClamp();
-                for (int i = 0; i < Lines.Count; i++)
-                {
-                    FlushRenderedLine(i);
-                }
+                FlushRenderedLineAll();
                 return true;
             case ConsoleKey.UpArrow:
                 Cursor_y--;
@@ -433,6 +484,8 @@ public class NeoInteractor
                 if (Lines.Count == 0 && Paras.Count >= 2)
                 {
                     Paras.RemoveAt(Cursor_z);
+                    Cursor_z--;
+                    FlushRenderedLineAll();
                 }
                 else
                 {
@@ -448,6 +501,8 @@ public class NeoInteractor
                         Cursor_x = Lines[Cursor_y - 1].Length;
                         Lines[Cursor_y - 1] += CurrentLine;
                         Lines.RemoveAt(Cursor_y);
+                        Cursor_y--;
+                        FlushRenderedLineAll();
                     }
                 }
                 else
@@ -464,6 +519,7 @@ public class NeoInteractor
                     {
                         CurrentLine += Lines[Cursor_y + 1];
                         Lines.RemoveAt(Cursor_y + 1);
+                        FlushRenderedLineAll();
                     }
                 }
                 else
@@ -495,6 +551,7 @@ public class NeoInteractor
                     Lines[Cursor_y + 1] += CurrentLine[Cursor_x..];
                     CurrentLine = CurrentLine[..Cursor_x];
                     Cursor_x = i;
+                    FlushRenderedLineAll();
                 }
                 Cursor_y++;
                 CursorClamp();

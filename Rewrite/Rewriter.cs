@@ -70,7 +70,7 @@ namespace Ravel.Rewrite
             {
                 return @if;
             }
-            return new BoundIfExpression(cond, expTrue, expFalse);
+            return new BoundIfExpression(cond, expTrue, expFalse, @if.Type);
         }
 
         protected virtual BoundExpression RewriteFunctionDefining(BoundFunctionDefiningExpression functionDefining)

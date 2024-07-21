@@ -85,16 +85,16 @@ namespace Ravel.Values
             Rerror(span, $"类型<{type}>与<{wanted.Name}>不匹配", 12);
         }
 
-        public void ReportNotAType(TextSpan span, RavelType type)
+        public void ReportNotAType(TextSpan span)
         {
-            Rerror(span, $"<{type}>不是类型", 13);
+            Rerror(span, $"结果不是类型", 13);
         }
 
-        public void ReportTypeNotConst(DeclareExpressionSyntax syntax)
+        public void ReportVariableNotReadonly(ExpressionSyntax syntax)
         {
-            Rerror(syntax.Type!.Span, $"目标类型不是常量", 14);
+            Rerror(syntax.Span, $"目标变量不是只读", 14);
         }
-
+        
         public void ReportReadOnlyVariableChange(lDeclare ob, TextSpan span)
         {
             Rerror(span, $"只读变量<{ob.Name}>不可赋值", 15);
@@ -148,6 +148,20 @@ namespace Ravel.Values
         internal void ReportBlockEmpty(BlockSyntax block)
         {
             Rerror(block.Span, "语句块不能为空", 25);
+        }
+
+        internal void ReportVariableIllegalName(SyntaxToken variable)
+        {
+            Rerror(variable.Span, $"变量名不能为\"{variable.Text}\"", 26);
+        }
+        public void ReportResultNotConst(ExpressionSyntax syntax)
+        {
+            Rerror(syntax.Span, $"目标结果不是常量", 27);
+        }
+
+        internal void ReportFailToCalculateWhenBinding(ExpressionSyntax syntax)
+        {
+            Rerror(syntax.Span, $"试图在绑定期间求值失败", 28);
         }
     }
 }

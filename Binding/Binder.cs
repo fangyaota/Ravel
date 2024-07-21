@@ -2,6 +2,8 @@
 using Ravel.Text;
 using Ravel.Values;
 
+using System.IO;
+
 namespace Ravel.Binding
 {
     public sealed class Binder
@@ -65,12 +67,11 @@ namespace Ravel.Binding
         private BoundExpression BindDeclareExpression(DeclareExpressionSyntax declare)
         {
             _diagnostics.ReportNotSupportedYet(declare.Span);
-            if (!BindDefining(declare, out RavelType? ravelType))
+            if (!TryGetDefineTypeOrReport(declare, out RavelType? ravelType))
             {
-                _diagnostics.StopRecord = true;
                 return new BoundErrorExpression(Global.TypePool.VoidType);
             }
-            if (!_scope.TryDeclare(declare.Identifier.Text, ravelType!, declare.IsReadonly, declare.IsConst))
+            if (!_scope.TryDeclare(declare.Identifier.Text, ravelType!, declare.IsReadonly))
             {
                 _diagnostics.ReportVariableAlreadyExists(declare);
             }
@@ -80,9 +81,13 @@ namespace Ravel.Binding
         private BoundExpression BindWhileExpression(WhileExpressionSyntax @while)
         {
             BoundExpression condition = BindExpression(@while.Condition);
-            if (condition is not BoundErrorExpression)
+            if (!condition.Type.IsSonOrEqual(Global.TypePool.BoolType))
             {
-                if (!condition.Type.IsSonOrEqual(Global.TypePool.BoolType))
+                if (TryImplictConvert(condition, Global.TypePool.BoolType, out var convert))
+                {
+                    condition = convert;
+                }
+                else
                 {
                     _diagnostics.ReportTypeNotMatching(@while.Condition.Span, condition.Type, Global.TypePool.BoolType);
                 }
@@ -93,6 +98,18 @@ namespace Ravel.Binding
             _scope = s;
 
             return new BoundWhileExpression(condition, expr);
+        }
+
+        private bool TryImplictConvert(BoundExpression condition, RavelType need, out BoundConvertExpression convert)
+        {
+            var c = condition.Type.GetImplictConverter(need);
+            if(c != null)
+            {
+                convert = new(condition, c);
+                return true;
+            }
+            convert = null!;
+            return false;
         }
 
         private BoundExpression BindUnexpected(ExpressionSyntax syntax)
@@ -133,7 +150,7 @@ namespace Ravel.Binding
             {
                 if (lambda.Parameters[i] is NameExpressionSyntax name && name.Identifier.Text == "_")
                 {
-                    parameters.Add(i, new(function.Type.GetFuncParametersIndex(i), $"_{i}", false, false));
+                    parameters.Add(i, new(function.Type.GetFuncParametersIndex(i), $"_{i}", false));
                 }
             }
 
@@ -173,71 +190,71 @@ namespace Ravel.Binding
         private BoundExpression BindIfExpression(IfExpressionSyntax @if)
         {
             BoundExpression condition = BindExpression(@if.Condition);
-            if (condition is not BoundErrorExpression)
+            if (!condition.Type.IsSonOrEqual(Global.TypePool.BoolType))
             {
-                if (!condition.Type.IsSonOrEqual(Global.TypePool.BoolType))
+                if (TryImplictConvert(condition, Global.TypePool.BoolType, out var convert))
+                {
+                    condition = convert;
+                }
+                else
                 {
                     _diagnostics.ReportTypeNotMatching(@if.Condition.Span, condition.Type, Global.TypePool.BoolType);
                 }
             }
-
             BoundScope s = _scope;
             _scope = new(_scope);
             BoundExpression expTrue = BindExpression(@if.ExpTrue);
             BoundExpression expFalse = BindExpression(@if.ExpFalse);
             _scope = s;
 
-            if (!expTrue.Type.IsSonOrEqual(expFalse.Type))
-            {
-                _diagnostics.ReportTypeNotMatching(@if.ExpFalse.Span, expTrue.Type, expFalse.Type);
-            }
-            return new BoundIfExpression(condition, expTrue, expFalse);
+            var returnType = RavelType.GetCommonParent(expTrue.Type, expFalse.Type);
+
+            return new BoundIfExpression(condition, expTrue, expFalse, returnType);
         }
 
-        private bool BindDefining(DeclareExpressionSyntax defining, out RavelType? ravelType, RavelType? matchType = null)
+        private bool TryGetDefineTypeOrReport(DeclareExpressionSyntax defining, out RavelType ravelType)
         {
-            ravelType = null;
+            ravelType = null!;
             if (defining.Type == null)
             {
                 return true;
             }
-            if (defining.Tokens.Any(x => x.Kind is SyntaxKind.Dynamic))
+            //if (defining.Tokens.Any(x => x.Kind is SyntaxKind.Dynamic))
+            //{
+            //    ravelType = matchType;
+            //    return true;
+            //}
+            BoundExpression bound_type = BindExpression(defining.Type);
+            if (bound_type is BoundErrorExpression or BoundDeclareExpression)
             {
-                ravelType = matchType;
+                return false;
+            }
+            try
+            {
+                RavelObject bound_type_result = new NeoEvaluator(bound_type, Global).Evaluate();//?
+
+                ravelType = bound_type_result.GetValue<RavelType>();
+
+
+                if (!bound_type.IsConst)
+                {
+                    _diagnostics.ReportResultNotConst(defining.Type);
+                    return true;
+                }
+                if (!bound_type.Type.IsSonOrEqual(Global.TypePool.TypeType))
+                {
+                    _diagnostics.ReportNotAType(defining.Type.Span);
+                    _diagnostics.StopRecord = true;
+                    return false;
+                }
+
                 return true;
             }
-            BoundExpression type = BindExpression(defining.Type);
-            if (type is BoundErrorExpression or BoundDeclareExpression)
+            catch
             {
+                _diagnostics.ReportFailToCalculateWhenBinding(defining.Type);
                 return false;
             }
-            if (!type.IsConst)
-            {
-                _diagnostics.ReportTypeNotConst(defining);
-                return false;
-            }
-            if (!type.Type.IsSonOrEqual(Global.TypePool.TypeType))
-            {
-                _diagnostics.ReportNotAType(defining.Type.Span, type.Type);
-                return false;
-            }
-
-
-
-            RavelObject result = new NeoEvaluator(type, Global).Evaluate();//?
-
-            ravelType = result.GetValue<RavelType>();
-            if (matchType == null)
-            {
-                return true;
-            }
-
-            if (!ravelType.IsSonOrEqual(matchType))
-            {
-                _diagnostics.ReportTypeNotMatching(defining.Span, matchType, ravelType);
-                return false;
-            }
-            return true;
         }
         private BoundExpression BindFunctionDefiningExpression(FunctionDefiningExpressionSyntax defining)
         {
@@ -247,9 +264,9 @@ namespace Ravel.Binding
             List<RavelDefining> parameters = new();
             foreach (DeclareExpressionSyntax i in defining.ParamList)
             {
-                if (BindDefining(i, out RavelType? t))
+                if (TryGetDefineTypeOrReport(i, out RavelType? t))
                 {
-                    parameters.Add(new(t!, i.Identifier.Text, false, false));
+                    parameters.Add(new(t!, i.Identifier.Text, false));
                 }
             }
             foreach (RavelDefining i in parameters)
@@ -258,19 +275,19 @@ namespace Ravel.Binding
             }
             if (defining.TypeIdentifier != null)
             {
-                if (!Global.Variables.TryGetVariable(defining.TypeIdentifier.Text, out RavelVariable? variable))
+                if (!Global.Variables.TryGetVariable(defining.TypeIdentifier.Text, out RavelVariable variable))
                 {
                     _diagnostics.ReportUndefinedName(defining.TypeIdentifier);
                     goto r;
                 }
                 if (variable.Type != Global.TypePool.TypeType)
                 {
-                    _diagnostics.ReportNotAType(defining.TypeIdentifier.Span, variable.Type);
+                    _diagnostics.ReportTypeNotMatching(defining.TypeIdentifier.Span, variable.Type, Global.TypePool.TypeType);
                     goto r;
                 }
                 RavelType o = variable.Object.GetValue<RavelType>();
                 RavelType type = Global.TypePool.GetFuncType(o, parameters.Select(x => x.Type).ToArray());
-                _scope.TryDeclare("self", type, true, false);
+                _scope.TryDeclare("self", type, true);
                 BoundExpression sent = BindExpression(defining.Sentence);
                 _scope = s;
                 return new BoundFunctionDefiningExpression(parameters, sent, type);
@@ -404,30 +421,48 @@ namespace Ravel.Binding
         {
             string name = syntax.Declare.Identifier.Text;
             BoundExpression expression = BindExpression(syntax.Expression);
+            RavelType real = expression.Type;
+            bool isReadonly = false;
             if (expression is BoundErrorExpression)
             {
                 return expression;//?
             }
+            if(syntax.Declare.IsReadonly)
+            {
+                if (expression.IsConst)
+                {
+                    _diagnostics.ReportVariableNotReadonly(syntax.Expression);//?
+                }
+                isReadonly = true;
+            }
             if (syntax.Declare.Type == null)
             {
-                RavelDefining define = new (expression.Type, name, false, false);
-                if (!_scope.TryDeclare(name, expression.Type, false, false))
-                {
-                    _diagnostics.ReportVariableAlreadyExists(syntax.Declare);
-                }
-                return new BoundDefiningExpression(define, expression);
+                goto s;
             }
 
-            if (!BindDefining(syntax.Declare, out RavelType? real, expression.Type))
+            if (!TryGetDefineTypeOrReport(syntax.Declare, out real))
             {
                 return expression;
             }
-            RavelDefining defined = new(real!, name, false, false);
-            if (!_scope.TryDeclare(name, expression.Type, false, false))
+
+            if (!expression.Type.IsSonOrEqual(real))
+            {
+                if (TryImplictConvert(expression, Global.TypePool.BoolType, out var convert))
+                {
+                    expression = convert;
+                }
+                else
+                {
+                    _diagnostics.ReportTypeNotMatching(syntax.Expression.Span, expression.Type, real);
+                }
+            }
+
+            s:
+            if (!_scope.TryDeclare(name, real, isReadonly))
             {
                 _diagnostics.ReportVariableAlreadyExists(syntax.Declare);
             }
-            return new BoundDefiningExpression(defined, expression);
+            return new BoundDefiningExpression(_scope[name], expression);
         }
 
         private BoundExpression BindNameExpression(NameExpressionSyntax syntax)

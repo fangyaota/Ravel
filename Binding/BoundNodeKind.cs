@@ -16,6 +16,7 @@
         WhileExpression,
         ErrorExpression,
         DeclareExpression,
-        AsExpression
+        AsExpression,
+        ConvertExpression
     }
 }

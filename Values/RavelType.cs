@@ -13,6 +13,7 @@ namespace Ravel.Values
         private int ParentDepth { get; }
         public List<RavelBinaryOperator> BinaryOperators { get; } = new();
         public List<RavelUnaryOperator> UnaryOperators { get; } = new();
+        public List<RavelImplictConverter> ImplictConverters { get; } = new();
         public RavelScope SonVariables { get; }
 
         public RavelRealConstructor? TypeConstructor { get; }
@@ -134,6 +135,21 @@ namespace Ravel.Values
                 return null;
             }
             return Parent.GetOperator(kind);
+        }
+        public RavelImplictConverter? GetImplictConverter(RavelType to)
+        {
+            foreach(var i in ImplictConverters)
+            {
+                if(i.To == to)
+                {
+                    return i;
+                }
+            }
+            if(this == Parent)
+            {
+                return null;
+            }
+            return Parent.GetImplictConverter(to);
         }
         public bool TryGetSonVariable(string name, out RavelVariable? variable)
         {

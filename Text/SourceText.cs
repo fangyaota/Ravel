@@ -9,23 +9,23 @@
         }
         public int GetLineIndex(int position)
         {
-            int lower = 0;
-            int upper = Lines.Count - 1;
+            int lower_line_index = 0;
+            int upper_line_index = Lines.Count - 1;
             if (position >= Text.Length)
             {
-                return upper;
+                return upper_line_index;
             }
             while (true)
             {
-                int i = (lower + upper) / 2;
+                int i = (lower_line_index + upper_line_index) / 2;
                 if (Lines[i].Start > position)
                 {
-                    upper = i;
+                    upper_line_index = i;
                     continue;
                 }
-                if (Lines[i].EndIncludingLineBreaking < position)
+                if (Lines[i].EndIncludingLineBreaking <= position)
                 {
-                    lower = i;
+                    lower_line_index = i + 1;
                     continue;
                 }
                 return i;

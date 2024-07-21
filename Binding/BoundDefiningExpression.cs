@@ -17,7 +17,7 @@ namespace Ravel.Binding
         public lDeclare Declare { get; }
         public BoundExpression Expression { get; }
 
-        public override bool IsConst => Declare.IsConst;
+        public override bool IsConst => Expression.IsConst;
 
         public override IEnumerable<BoundNode> GetChildren()
         {

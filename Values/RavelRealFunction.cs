@@ -1,6 +1,6 @@
 ﻿namespace Ravel.Values
 {
-    public class RavelRealFunction : RavelFunction
+    public sealed class RavelRealFunction : RavelFunction
     {
         public RavelRealFunction(Func<NeoEvaluator, RavelObject, RavelObject> func, RavelType type, bool isConst)
             : this((Delegate)func, type, isConst)

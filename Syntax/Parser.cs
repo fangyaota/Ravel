@@ -267,6 +267,10 @@ namespace Ravel.Syntax
         {
             bool haserror = false;
             SyntaxToken variable = MatchToken(ref haserror, SyntaxKind.Variable);
+            if(variable.Text == "_")
+            {
+                _diagnostics.ReportVariableIllegalName(variable);
+            }
             SyntaxToken colon = MatchToken(ref haserror, SyntaxKind.Colon);
             List<SyntaxToken> tokens = new();
             while (Current.Kind.IsVariableKeyword())
@@ -383,25 +387,24 @@ namespace Ravel.Syntax
         {
             List<ExpressionSyntax> l = new();
             SyntaxToken open = MatchToken(SyntaxKind.OpenHesis);
-            while (Current.Kind is SyntaxKind.EndOfLine)
-            {
-                NextToken();
-            }
+            MatchAllEOF();
             while (!Current.Kind.IsEnd())
             {
-                while (Current.Kind is SyntaxKind.EndOfLine)
-                {
-                    NextToken();
-                }
                 l.Add(ParseStatement());
-            }
-            while (Current.Kind is SyntaxKind.EndOfLine)
-            {
-                NextToken();
+                MatchAllEOF();
             }
             SyntaxToken close = MatchToken(SyntaxKind.CloseHesis);
             return new BlockSyntax(open, l, close);
         }
+
+        private void MatchAllEOF()
+        {
+            while (Current.Kind is SyntaxKind.EndOfLine)
+            {
+                NextToken();
+            }
+        }
+
         /// <summary>
         /// 解析列表表达式，如
         /// [a b c]
@@ -412,21 +415,11 @@ namespace Ravel.Syntax
         {
             List<ExpressionSyntax> l = new();
             SyntaxToken open = MatchToken(SyntaxKind.OpenBracket);
-            while (Current.Kind is SyntaxKind.EndOfLine)
-            {
-                NextToken();
-            }
+            MatchAllEOF();
             while (!Current.Kind.IsEnd())
             {
-                while (Current.Kind is SyntaxKind.EndOfLine)
-                {
-                    NextToken();
-                }
                 l.Add(ParsePrimary());
-            }
-            while (Current.Kind is SyntaxKind.EndOfLine)
-            {
-                NextToken();
+                MatchAllEOF();
             }
             SyntaxToken close = MatchToken(SyntaxKind.CloseBracket);
             return new ListSyntax(open, l, close);

@@ -8,15 +8,11 @@
 
         public bool IsReadOnly { get; }
 
-        public bool IsConst { get; }
-
-
-        public RavelDefining(RavelType type, string name, bool isReadOnly, bool isConst)
+        public RavelDefining(RavelType type, string name, bool isReadOnly)
         {
             Type = type;
             Name = name;
             IsReadOnly = isReadOnly;
-            IsConst = isConst;
         }
     }
 }

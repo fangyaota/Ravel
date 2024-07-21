@@ -25,13 +25,13 @@ namespace Ravel.Binding
                 Variables[name] = value;
             }
         }
-        public bool TryDeclare(string name, RavelType type, bool isReadOnly, bool isConst)
+        public bool TryDeclare(string name, RavelType type, bool isReadOnly)
         {
             if (Variables.ContainsKey(name))
             {
                 return false;
             }
-            Variables[name] = new RavelDefining(type, name, isReadOnly, isConst);
+            Variables[name] = new RavelDefining(type, name, isReadOnly);
             return true;
         }
         public bool TryGetVariable(string name, out lDeclare variable)

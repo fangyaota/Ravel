@@ -3,7 +3,7 @@
 namespace Ravel.Values
 {
 
-    public class RavelRealConstructor : RavelConstructor
+    public sealed class RavelRealConstructor : RavelConstructor
     {
         public RavelRealConstructor(RavelRealFunction function, RavelScope scope, string name)
             : base(function, scope, name)
