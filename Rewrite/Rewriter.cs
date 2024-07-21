@@ -27,6 +27,7 @@ namespace Ravel.Rewrite
                 BoundBinaryExpression binary => RewriteBinary(binary),
                 BoundFunctionCallExpression call => RewriteFunctionCall(call),
                 BoundBlockExpression block => RewriteBlock(block),
+                BoundListExpression list => RewriteList(list),
                 BoundDotExpression dot => RewriteDot(dot),
                 BoundFunctionDefiningExpression functionDefining => RewriteFunctionDefining(functionDefining),
                 BoundIfExpression @if => RewriteIf(@if),
@@ -35,6 +36,8 @@ namespace Ravel.Rewrite
                 //_ => throw new InvalidOperationException($"Unexpected node '{root.Kind}'"),
             };
         }
+
+        
 
         protected virtual BoundExpression RewriteAs(BoundAsExpression asExp)
         {
@@ -109,7 +112,25 @@ namespace Ravel.Rewrite
             }
             return new BoundBlockExpression(expressions);
         }
-
+        protected virtual BoundExpression RewriteList(BoundListExpression list)
+        {
+            List<BoundExpression> expressions = new();
+            bool diff = false;
+            foreach (BoundExpression sent in list.Expressions)
+            {
+                BoundExpression item = Rewrite(sent);
+                if (item != sent)
+                {
+                    diff = true;
+                }
+                expressions.Add(item);
+            }
+            if (!diff)
+            {
+                return list;
+            }
+            return new BoundListExpression(expressions, list.Type);
+        }
         protected virtual BoundExpression RewriteFunctionCall(BoundFunctionCallExpression call)
         {
             List<BoundExpression> expressions = new();

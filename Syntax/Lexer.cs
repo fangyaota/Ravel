@@ -66,14 +66,13 @@ namespace Ravel.Syntax
         private bool TakeTill(out int start, out string text, Predicate<char> predicate)
         {
             start = _position;
+            text = "";
             if (_position >= _text.Length)
             {
-                text = "";
                 return false;
             }
             if (!predicate(Current))
             {
-                text = "";
                 return false;
             }
             while (_position < _text.Length && predicate(Current))
@@ -86,7 +85,7 @@ namespace Ravel.Syntax
         private bool TakeContains(out int start, out string text, out SyntaxKind syntax)
         {
             start = _position;
-            text = string.Empty;
+            text = "";
             syntax = SyntaxKind.BadToken;
             for (int len = Global.SyntaxFacts.LongestLength; len > 0; len--)
             {
@@ -134,7 +133,7 @@ namespace Ravel.Syntax
             if (TakeTill(out _start, out _nowText, char.IsWhiteSpace))
             {
                 TryReport();
-                return new(SyntaxKind.WhiteSpace, _position, _nowText, Global.TypePool.StringType.GetRavelObject(_nowText));
+                return new(SyntaxKind.WhiteSpace, _start, _nowText, Global.TypePool.StringType.GetRavelObject(_nowText));
             }
             //syntax
             if (TakeContains(out _start, out _nowText, out SyntaxKind syntax))

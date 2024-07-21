@@ -2,12 +2,12 @@
 
 namespace Ravel.Binding
 {
-    public sealed class BoundBlockExpression : BoundExpression
+    public sealed class BoundListExpression : BoundExpression
     {
-        public BoundBlockExpression(List<BoundExpression> expressions)
+        public BoundListExpression(List<BoundExpression> expressions, RavelType type)
         {
             Expressions = expressions;
-            Type = Expressions.Last().Type;
+            Type = type;
         }
         public override RavelType Type { get; }
 

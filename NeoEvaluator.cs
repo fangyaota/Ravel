@@ -76,6 +76,9 @@ namespace Ravel
                 case BoundBlockExpression block:
                     EvaluateBlock(block);
                     break;
+                case BoundListExpression list:
+                    EvaluateList(list);
+                    break;
                 case BoundDotExpression dot:
                     EvaluateDot(dot);
                     break;
@@ -217,7 +220,22 @@ namespace Ravel
                 AddResultAndReturn(CurrentCallStack.SonResults[^1]);
             }
         }
-
+        private void EvaluateList(BoundListExpression block)
+        {
+            int resultCount = CurrentCallStack.SonResults.Count;
+            if (resultCount == 0)
+            {
+                CurrentCallStack.Scope = new(CurrentCallStack.Scope);
+            }
+            if (resultCount < block.Expressions.Count)
+            {
+                CurrentCallStack = new(CurrentCallStack, block.Expressions[resultCount]);
+            }
+            else
+            {
+                AddResultAndReturn(block.Type.GetRavelObject(new List<RavelObject>(CurrentCallStack.SonResults)));
+            }
+        }
         private void EvaluateFunctionCall(BoundFunctionCallExpression call)
         {
             int resultCount = CurrentCallStack.SonResults.Count;
@@ -460,6 +478,10 @@ namespace Ravel
 
         public IEnumerable<T> GetReversed()
         {
+            if(Count == 0)
+            {
+                yield break;
+            }
             SingleLinkedList<T>? list = this;
             while (list != null)
             {

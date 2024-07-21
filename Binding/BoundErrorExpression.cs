@@ -4,7 +4,11 @@ namespace Ravel.Binding
 {
     public sealed class BoundErrorExpression : BoundExpression
     {
-        public override RavelType Type => throw new InvalidOperationException();
+        public BoundErrorExpression(RavelType errorType)
+        {
+            Type = errorType;
+        }
+        public override RavelType Type { get; }
 
         public override bool IsConst => false;
 

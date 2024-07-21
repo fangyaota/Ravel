@@ -1,4 +1,5 @@
 ﻿using Ravel;
+using Ravel.Syntax;
 using Ravel.Values;
 
 using Spectre.Console;
@@ -19,6 +20,7 @@ public class NeoInteractor
             Paras[Cursor_z] = value;
         }
     }
+    public Dictionary<int, string> RenderedLines { get; set; } = new();
     private string CurrentLine
     {
         get
@@ -53,7 +55,89 @@ public class NeoInteractor
     }
     public string GetText()
     {
-        return string.Join('\n', Lines).EscapeMarkup();
+        StringBuilder sb = new();
+        sb.Append('(');
+        sb.AppendJoin('\n', Lines);
+        sb.Append(").ToString");
+        return sb.ToString();
+    }
+    public void FlushRenderedLine(int index)
+    {
+        if (index >= Lines.Count)
+        {
+            return;
+        }
+
+        StringBuilder sb = new();
+
+        sb.Append($"[blue]{index.ToString().PadLeft(3)}|[/] ");
+
+        string the_line = Lines[index];
+
+        Lexer lexer = new(new(the_line), Global);
+        bool co = false;
+        foreach (SyntaxToken i in lexer.Lex())
+        {
+            if (!co)
+            {
+                switch (i.Kind)
+                {
+                    case SyntaxKind.String:
+                        sb.Append("[yellow]");
+                        break;
+                    case SyntaxKind.Integer:
+                    case SyntaxKind.Boolean:
+                    case SyntaxKind.Void:
+                    case SyntaxKind.None:
+                        sb.Append("[lime]");
+                        break;
+                    case SyntaxKind.If:
+                    case SyntaxKind.For:
+                    case SyntaxKind.While:
+                    case SyntaxKind.Using:
+                    case SyntaxKind.What:
+                        sb.Append("[blue]");
+                        break;
+                    case SyntaxKind.Variable:
+                        sb.Append("[cyan]");
+                        break;
+                    case SyntaxKind.Sharp:
+                        sb.Append("[green]");
+                        co = true;
+                        break;
+                    default:
+                        sb.Append("[bold]");
+                        break;
+                }
+            }
+
+            if (Cursor_y == index && i.Span.Start <= Cursor_x && Cursor_x < i.Span.End)
+            {
+                sb.Append(the_line[i.Span.Start..Cursor_x].EscapeMarkup());
+                sb.Append("[underline red]");
+                sb.Append(the_line[Cursor_x].ToString().EscapeMarkup());
+                sb.Append("[/]");
+                sb.Append(the_line[(Cursor_x + 1)..i.Span.End].EscapeMarkup());
+            }
+            else
+            {
+                sb.Append(i.Text.EscapeMarkup());
+            }
+            if (!co)
+            {
+                sb.Append("[/]");
+            }
+        }
+        if (co)
+        {
+            sb.Append("[/]");
+        }
+        if (Cursor_y == index && Cursor_x == the_line.Length)
+        {
+            sb.Append("[underline red] [/]");
+        }
+        sb.AppendLine();
+        RenderedLines[index] = sb.ToString();
     }
     public string GetRenderText(int middle)
     {
@@ -71,36 +155,11 @@ public class NeoInteractor
         {
             for (int i = left; i < right; i++)
             {
-                sb.Append($"[blue]{i.ToString().PadLeft(3)}|[/] ");
-                if (i == Cursor_y)
+                if(!RenderedLines.ContainsKey(i))
                 {
-                    sb.Append("[yellow]");
-                    if (Lines[i].Length != 0)
-                    {
-                        sb.Append(Lines[i][..Cursor_x].EscapeMarkup());
-                        if (Lines[i].Length > Cursor_x)
-                        {
-                            sb.Append("[underline red]");
-                            sb.Append(Lines[i][Cursor_x].ToString().EscapeMarkup());
-                            sb.Append("[/]");
-                            sb.Append(Lines[i][(Cursor_x + 1)..].EscapeMarkup());
-                        }
-                        else
-                        {
-                            sb.Append("[underline red] [/]");
-                        }
-                    }
-                    else
-                    {
-                        sb.Append("[underline red] [/]");
-                    }
-                    sb.Append("[/]");
+                    FlushRenderedLine(i);
                 }
-                else
-                {
-                    sb.Append(Lines[i].EscapeMarkup());
-                }
-                sb.AppendLine();
+                sb.Append(RenderedLines[i]);
             }
             if (right - left <= 8)
             {
@@ -169,12 +228,12 @@ public class NeoInteractor
         {
             [0] = ("编辑", DynamicInput),
             [1] = ("编译", EvaluateTryCompile),
-            [2] = ("退出", EvaluateExit),
-            [3] = ("开关结果显示", EvaluateOutPut),
+            [2] = ("显示作者", EvaluateShowRavel),
+            [3] = ("开关自动对齐", EvaluateShowAutoTab),
             [4] = ("开关解析树显示", EvaluateShowSyntaxTree),
             [5] = ("开关绑定树显示", EvaluateShowProgramTree),
-            [6] = ("显示作者", EvaluateShowRavel),
-            [7] = ("开关自动对齐", EvaluateShowAutoTab),
+            [6] = ("开关结果显示", EvaluateOutPut),
+            [7] = ("退出", EvaluateExit),
         };
         var prompt = new SelectionPrompt<int>()
             .Title("------主菜单------")
@@ -213,12 +272,15 @@ public class NeoInteractor
                 Ravel.Text.TextLine startLine = compiler.Source.Lines[start];
                 Ravel.Text.TextLine endLine = compiler.Source.Lines[end];
 
-                AnsiConsole.MarkupLine($"[yellow]{diagnostic}[/]");
+                AnsiConsole.MarkupLine($"[yellow]{diagnostic.ToString().EscapeMarkup()}[/]");
 
                 string first = startLine[0, diagnostic.Span.Start - startLine.Start];
                 string second = compiler.Source[diagnostic.Span];
                 string third = endLine[diagnostic.Span.End - endLine.Start, endLine.LengthIncludingLineBreaking].Replace("\r", "").Replace("\n", "");
-                AnsiConsole.MarkupLine($"{first}[underline red]{second}[/]{third}");
+                AnsiConsole.Write(first);
+                AnsiConsole.Markup($"[underline red]{second.EscapeMarkup()}[/]");
+                AnsiConsole.Write(third);
+                AnsiConsole.WriteLine();
             }
             Pause();
             return;
@@ -228,7 +290,8 @@ public class NeoInteractor
             RavelObject result = compiler.Evaluator.Evaluate();
             if (OutPut)
             {
-                AnsiConsole.MarkupLine($"[yellow]==>[/]{result}");
+                AnsiConsole.Markup($"[yellow]==>[/]");
+                AnsiConsole.WriteLine(result.GetValue<string>());
             }
         } while (AnsiConsole.Confirm("重试吗？", false));
 
@@ -278,10 +341,17 @@ public class NeoInteractor
         while (true)
         {
             var input = Console.ReadKey(true);
+            int last_y = Cursor_y;
             if (CursorEdit(input))
             {
+                FlushRenderedLine(last_y);
+                if (Cursor_y != last_y)
+                {
+                    FlushRenderedLine(Cursor_y);
+                }
                 ClearAndRender();
                 RenderEditTips();
+                last_y = Cursor_y;
                 continue;
             }
             switch (input.Key)
@@ -297,8 +367,12 @@ public class NeoInteractor
             CurrentLine = CurrentLine.Insert(Cursor_x, input.KeyChar.ToString());
             Cursor_x++;
             CursorClamp();
+
+            FlushRenderedLine(last_y);
+            FlushRenderedLine(Cursor_y);
             ClearAndRender();
             RenderEditTips();
+
         }
     }
     private bool InsertNewLineIfEmpty()
@@ -315,16 +389,29 @@ public class NeoInteractor
         switch (input.Key)
         {
             case ConsoleKey.PageUp:
+
+                Cursor_x = 0;
+                Cursor_y = 0;
                 Cursor_z--;
                 CursorClamp();
+                for (int i = 0; i < Lines.Count; i++)
+                {
+                    FlushRenderedLine(i);
+                }
                 return true;
             case ConsoleKey.PageDown:
                 if(Cursor_z == Paras.Count - 1 && Lines.Count != 0)
                 {
                     Paras.Add(new());
                 }
+                Cursor_x = 0;
+                Cursor_y = 0;
                 Cursor_z++;
                 CursorClamp();
+                for (int i = 0; i < Lines.Count; i++)
+                {
+                    FlushRenderedLine(i);
+                }
                 return true;
             case ConsoleKey.UpArrow:
                 Cursor_y--;
@@ -343,7 +430,14 @@ public class NeoInteractor
                 CursorClamp();
                 return true;
             case ConsoleKey.Insert:
-                Lines.Clear();
+                if (Lines.Count == 0 && Paras.Count >= 2)
+                {
+                    Paras.RemoveAt(Cursor_z);
+                }
+                else
+                {
+                    Lines.Clear();
+                }
                 CursorClamp();
                 return true;
             case ConsoleKey.Backspace:
@@ -351,6 +445,7 @@ public class NeoInteractor
                 {
                     if (Cursor_y >= 1)
                     {
+                        Cursor_x = Lines[Cursor_y - 1].Length;
                         Lines[Cursor_y - 1] += CurrentLine;
                         Lines.RemoveAt(Cursor_y);
                     }

@@ -8,7 +8,7 @@
         VariableExpression,
         DefiningExpression,
         FunctionCallExpression,
-        BlockExpression,
+        ListExpression,
         AssignmentExpression,
         DotExpression,
         FunctionDefiningExpression,

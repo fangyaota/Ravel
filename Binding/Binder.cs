@@ -43,7 +43,6 @@ namespace Ravel.Binding
                 LiteralExpressionSyntax literal => BindLiteralExpression(literal),
                 UnaryExpressionSyntax unary => BindUnaryExpression(unary),
                 BinaryExpressionSyntax binary => BindBinaryExpression(binary),
-                ParenthesizedExpressionSyntax parenthesized => BindParenthesizedExpression(parenthesized),
                 NameExpressionSyntax name => BindNameExpression(name),
                 AssignmentExpressionSyntax assignment => BindAssignmentExpression(assignment),
                 DefiningExpressionSyntax defining => BindDefiningExpression(defining),
@@ -51,6 +50,7 @@ namespace Ravel.Binding
                 DotExpresionSyntax dot => BindDotExpression(dot),
                 StatementSyntax statement => BindStatementExpression(statement),
                 BlockSyntax block => BindBlockExpression(block),
+                ListSyntax list => BindListExpression(list),
                 FunctionDefiningExpressionSyntax functionDefining => BindFunctionDefiningExpression(functionDefining),
                 IfExpressionSyntax @if => BindIfExpression(@if),
                 LambdaDefiningExpressionSyntax lambda => BindLambdaDefining(lambda),
@@ -60,12 +60,15 @@ namespace Ravel.Binding
             };
         }
 
+        
+
         private BoundExpression BindDeclareExpression(DeclareExpressionSyntax declare)
         {
             _diagnostics.ReportNotSupportedYet(declare.Span);
             if (!BindDefining(declare, out RavelType? ravelType))
             {
-                return new BoundErrorExpression();
+                _diagnostics.StopRecord = true;
+                return new BoundErrorExpression(Global.TypePool.VoidType);
             }
             if (!_scope.TryDeclare(declare.Identifier.Text, ravelType!, declare.IsReadonly, declare.IsConst))
             {
@@ -89,18 +92,14 @@ namespace Ravel.Binding
             BoundExpression expr = BindExpression(@while.Expression);
             _scope = s;
 
-            if (expr is BoundErrorExpression)
-            {
-                return expr;
-            }
-
             return new BoundWhileExpression(condition, expr);
         }
 
         private BoundExpression BindUnexpected(ExpressionSyntax syntax)
         {
             _diagnostics.ReportNotSupportedToken(syntax);
-            return new BoundErrorExpression();
+            _diagnostics.StopRecord = true;
+            return new BoundErrorExpression(Global.TypePool.VoidType);
         }
 
         private BoundExpression BindLambdaDefining(LambdaDefiningExpressionSyntax lambda)
@@ -120,7 +119,8 @@ namespace Ravel.Binding
             if (!function.Type.IsFunction)
             {
                 _diagnostics.ReportNotAFunction(lambda.Span, function);
-                return new BoundErrorExpression();
+                _diagnostics.StopRecord = true;
+                return new BoundErrorExpression(function.Type);
             }
 
             if (lambda.Parameters.Count > function.Type.GetMaxParameters())
@@ -187,14 +187,6 @@ namespace Ravel.Binding
             BoundExpression expFalse = BindExpression(@if.ExpFalse);
             _scope = s;
 
-            if (expTrue is BoundErrorExpression)
-            {
-                return expTrue;
-            }
-            if (expFalse is BoundErrorExpression)
-            {
-                return expFalse;
-            }
             if (!expTrue.Type.IsSonOrEqual(expFalse.Type))
             {
                 _diagnostics.ReportTypeNotMatching(@if.ExpFalse.Span, expTrue.Type, expFalse.Type);
@@ -342,11 +334,36 @@ namespace Ravel.Binding
             _scope = p;
             if (l.Count == 0)
             {
+                _diagnostics.ReportBlockEmpty(syntax);
                 return new BoundLiteralExpression(Global.TypePool.Unit);
+            }
+            if(l.Last() is BoundErrorExpression errorExpression)
+            {
+                return errorExpression;
             }
             return new BoundBlockExpression(l);
         }
-
+        private BoundExpression BindListExpression(ListSyntax list)
+        {
+            List<BoundExpression> l = new();
+            BoundScope p = _scope;
+            _scope = new(_scope);
+            foreach (var i in list.Statements)
+            {
+                l.Add(BindExpression(i));
+            }
+            _scope = p;
+            if(l.Count == 0)
+            {
+                return new BoundListExpression(l, Global.TypePool.TypePoolGetListType(Global.TypePool.ObjectType));
+            }
+            var elementType = l[0].Type;
+            foreach(var i in l)
+            {
+                elementType = RavelType.GetCommonParent(elementType, i.Type);
+            }
+            return new BoundListExpression(l, Global.TypePool.TypePoolGetListType(elementType));
+        }
         private BoundExpression BindStatementExpression(StatementSyntax syntax)
         {
             return BindExpression(syntax.Expression);
@@ -369,10 +386,6 @@ namespace Ravel.Binding
                 _diagnostics.ReportParametersTooMany(syntax.Function, paramList.Count, max);
                 return func;
             }
-            if (paramList.Any(x => x is BoundErrorExpression))
-            {
-                return new BoundErrorExpression();
-            }
             for (int i = 0; i < paramList.Count; i++)
             {
                 RavelType paramType = paramList[i].Type;
@@ -393,7 +406,7 @@ namespace Ravel.Binding
             BoundExpression expression = BindExpression(syntax.Expression);
             if (expression is BoundErrorExpression)
             {
-                return expression;
+                return expression;//?
             }
             if (syntax.Declare.Type == null)
             {
@@ -429,22 +442,14 @@ namespace Ravel.Binding
                 return new BoundVariableExpression(obj);
             }
             _diagnostics.ReportUndefinedName(syntax.Identifier);
-            return new BoundErrorExpression();
-        }
-
-        private BoundExpression BindParenthesizedExpression(ParenthesizedExpressionSyntax syntax)
-        {
-            return BindExpression(syntax.Expression);
+            _diagnostics.StopRecord = true;
+            return new BoundErrorExpression(Global.TypePool.VoidType);
         }
 
         private BoundExpression BindBinaryExpression(BinaryExpressionSyntax syntax)
         {
             BoundExpression left = BindExpression(syntax.Left);
             BoundExpression right = BindExpression(syntax.Right);
-            if (left is BoundErrorExpression || right is BoundErrorExpression)
-            {
-                return new BoundErrorExpression();
-            }
             RavelBinaryOperator? oper = left.Type.GetOperator(syntax.OperatorToken.Kind, right.Type);
             if (oper == null)
             {

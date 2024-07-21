@@ -1,5 +1,7 @@
 ﻿using Ravel.Syntax;
 
+using System.Xml.Linq;
+
 namespace Ravel.Values
 {
     public delegate RavelObject RawConstructor(object? raw);
@@ -8,6 +10,7 @@ namespace Ravel.Values
         public RavelTypePool TypePool { get; }
         public string Name { get; }
         public RavelType Parent { get; }
+        private int ParentDepth { get; }
         public List<RavelBinaryOperator> BinaryOperators { get; } = new();
         public List<RavelUnaryOperator> UnaryOperators { get; } = new();
         public RavelScope SonVariables { get; }
@@ -18,19 +21,40 @@ namespace Ravel.Values
 
         public static RavelType GetRavelType(string name, RavelTypePool typePool)
         {
+            if(typePool.TypeMap.TryGetValue(name, out var type))
+            {
+                return type;
+            }
             RavelType t = new(name, typePool);
             typePool.TypeMap[name] = t;
             return t;
         }
-        public static RavelType GetNewType(string name, RavelType parent)
+        public static RavelType GetRavelType(string name, RavelType parent)
         {
+            if (parent.TypePool.TypeMap.TryGetValue(name, out var type))
+            {
+                if(type.Parent != parent)
+                {
+                    throw new InvalidOperationException(name);
+                }
+                return type;
+            }
             RavelType t = new(name, parent);
             parent.TypePool.TypeMap[name] = t;
             return t;
         }
-        public static RavelType GetRavelType(RavelRealConstructor typeConstructor, RavelType parent, RavelType[] genericTypes, RavelScope temp_scope)
+        public static RavelType GetRavelType(RavelRealConstructor typeConstructor, RavelType parent, RavelType[] genericTypes)
         {
-            RavelType t = new(typeConstructor, parent, genericTypes, temp_scope);
+            string name = typeConstructor.GetSpecificName(genericTypes);
+            if (parent.TypePool.TypeMap.TryGetValue(name, out var type))
+            {
+                if (type.Parent != parent || type.TypeConstructor != typeConstructor)
+                {
+                    throw new InvalidOperationException(name);
+                }
+                return type;
+            }
+            RavelType t = new(typeConstructor, parent, genericTypes, new(parent.SonVariables));
             parent.TypePool.TypeMap[t.Name] = t;
             return t;
         }
@@ -39,6 +63,7 @@ namespace Ravel.Values
             Name = name;
             TypePool = typePool;
             Parent = this;
+            ParentDepth = 0;
             GenericTypes = Array.Empty<RavelType>();
             SonVariables = new();
         }
@@ -47,7 +72,8 @@ namespace Ravel.Values
         {
             Name = name;
             TypePool = parent.TypePool;
-            Parent = parent.TypePool.ObjectType;
+            Parent = parent;
+            ParentDepth = parent.ParentDepth + 1;
             GenericTypes = Array.Empty<RavelType>();
             SonVariables = new(parent.SonVariables);
         }
@@ -57,6 +83,7 @@ namespace Ravel.Values
             Name = name;
             TypePool = parent.TypePool;
             Parent = parent;
+            ParentDepth = parent.ParentDepth + 1;
             GenericTypes = genericTypes;
             SonVariables = temp_scope;
             TypeConstructor = typeConstructor;
@@ -186,7 +213,23 @@ namespace Ravel.Values
             }
             return type;
         }
-
+        public static RavelType GetCommonParent(RavelType left, RavelType right)
+        {
+            while (right.ParentDepth > left.ParentDepth)
+            {
+                right = right.Parent;
+            }
+            while (left.ParentDepth > right.ParentDepth)
+            {
+                left = left.Parent;
+            }
+            while(left != right)
+            {
+                left = left.Parent;
+                right = right.Parent;
+            }
+            return left;
+        }
         public RavelType ReturnType => GenericTypes[1];
 
         public RavelType Parameter => GenericTypes[0];

@@ -27,19 +27,19 @@ namespace Ravel.Values
         {
             ObjectType = RavelType.GetRavelType("object", this);
 
-            TypeType = RavelType.GetNewType("type", ObjectType);
+            TypeType = RavelType.GetRavelType("type", ObjectType);
 
-            VoidType = RavelType.GetNewType("void", ObjectType);
+            VoidType = RavelType.GetRavelType("void", ObjectType);
 
-            IntType = RavelType.GetNewType("int", ObjectType);
+            IntType = RavelType.GetRavelType("int", ObjectType);
 
-            BoolType = RavelType.GetNewType("bool", ObjectType);
+            BoolType = RavelType.GetRavelType("bool", ObjectType);
 
-            StringType = RavelType.GetNewType("string", ObjectType);
+            StringType = RavelType.GetRavelType("string", ObjectType);
 
-            EnumerableType = RavelType.GetNewType("enumerable", ObjectType);
+            EnumerableType = RavelType.GetRavelType("enumerable", ObjectType);
 
-            CallableType = RavelType.GetNewType("callable", ObjectType);
+            CallableType = RavelType.GetRavelType("callable", ObjectType);
 
             FunctionConstructor = new(null!, SystemScope, "function");
 
@@ -50,7 +50,7 @@ namespace Ravel.Values
 
             ListConstructor = new(new RavelRealFunction(GetListType, TT, true), SystemScope, "list");
 
-            CallStackType = RavelType.GetNewType("callstack", ObjectType);
+            CallStackType = RavelType.GetRavelType("callstack", ObjectType);
 
             Unit = RavelObject.GetVoid(this);
             True = BoolType.GetRavelObject(true);
@@ -82,7 +82,7 @@ namespace Ravel.Values
         {
             RavelType OTB = GetFuncType(BoolType, ObjectType, TypeType);
 
-            RavelType OSS = GetFuncType(StringType, ObjectType, StringType);
+            RavelType SSS = GetFuncType(StringType, StringType, StringType);
 
             RavelType OOB = GetFuncType(BoolType, ObjectType, ObjectType);
 
@@ -92,7 +92,7 @@ namespace Ravel.Values
 
             RavelRealFunction objectEqual = new(ObjEqual, OOB, false);
 
-            RavelRealFunction stringAdd = new(StringAdd, OSS, true);
+            RavelRealFunction stringAdd = new(StringAdd, SSS, true);
 
             RavelRealFunction objectAs = new(ObjAs, OTO, true);//?
 
@@ -100,14 +100,23 @@ namespace Ravel.Values
             ObjectType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
                 new (SyntaxKind.Is, RavelBinaryOperatorKind.TypeIs, objectIs),
-                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, stringAdd),
                 new(SyntaxKind.EqualEqual, RavelBinaryOperatorKind.EqualComparision, objectEqual),
                 new(SyntaxKind.As, RavelBinaryOperatorKind.As, objectAs),
 
             });
             RavelType OS = GetFuncType(StringType, ObjectType);
-            ObjectType.SonVariables.TryDeclare("ToString", new RavelRealFunction(ObjGetString, OS, true).GetRavelObject(), true, true, true);
+            RavelType IS = GetFuncType(StringType, IntType);
+            RavelType US = GetFuncType(StringType, VoidType);
+            RavelType SS = GetFuncType(StringType, StringType);
+            RavelType BS = GetFuncType(StringType, BoolType);
+            RavelType TS = GetFuncType(StringType, TypeType);
 
+            ObjectType.SonVariables.TryDeclare("ToString", new RavelRealFunction(ObjGetString, OS, true).GetRavelObject(), true, true, true);
+            IntType.SonVariables.TryDeclare("ToString", new RavelRealFunction(IntGetString, IS, true).GetRavelObject(), true, true, true);
+            VoidType.SonVariables.TryDeclare("ToString", new RavelRealFunction(VoidGetString, US, true).GetRavelObject(), true, true, true);
+            StringType.SonVariables.TryDeclare("ToString", new RavelRealFunction(StringGetString, SS, true).GetRavelObject(), true, true, true);
+            BoolType.SonVariables.TryDeclare("ToString", new RavelRealFunction(BoolGetString, BS, true).GetRavelObject(), true, true, true);
+            TypeType.SonVariables.TryDeclare("ToString", new RavelRealFunction(TypeGetString, TS, true).GetRavelObject(), true, true, true);
 
 
             RavelType III = GetFuncType(IntType, IntType, IntType);
@@ -150,11 +159,10 @@ namespace Ravel.Values
                 new(SyntaxKind.Not, RavelUnaryOperatorKind.Not, new RavelRealFunction(BoolNot, BB, true)),
             });
 
-            RavelType SOS = GetFuncType(StringType, StringType, ObjectType);
 
             StringType.BinaryOperators.AddRange(new RavelBinaryOperator[]
             {
-                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, new RavelRealFunction(StringAdd, SOS, true))
+                new(SyntaxKind.Plus, RavelBinaryOperatorKind.Addition, stringAdd)
             });
 
             RavelType TTT = GetFuncType(TypeType, TypeType, TypeType);
@@ -189,38 +197,28 @@ namespace Ravel.Values
         {
             return new(raw!, type, this);
         }
-        public RavelType GetFuncType(RavelType returnType, params RavelType[] types)
+        public RavelType GetFuncType(RavelType returnType, params RavelType[] parameters)
         {
-            types = types.Append(returnType).ToArray();
-            RavelType currentType = types[^1];
-            string name = types[^1].ToString();
-
-            for (int index = types.Length - 1; index >= 0; index--)
+            var total = parameters.Append(returnType).ToArray();
+            RavelType currentType = total[^1];
+            for (int index = total.Length - 2; index >= 0; index--)
             {
-                if (TypeMap.TryGetValue(name, out RavelType? val))
-                {
-                    currentType = val;
-                }
-                else
-                {
-                    currentType = TypePoolGetFunctionType(types[index], currentType);
-                }
-                if (index - 1 >= 0)
-                {
-                    name = FunctionConstructor.GetSpecificName(types[index - 1], currentType);
-                }
+                currentType = TypePoolGetFunctionType(total[index], currentType);
             }
             return currentType;
         }
-        private RavelType TypePoolGetFunctionType(RavelType f, RavelType s)
+        internal RavelType TypePoolGetFunctionType(RavelType from, RavelType to)
         {
-            return RavelType.GetRavelType(FunctionConstructor, CallableType, new RavelType[] { f, s }, new());
+            return RavelType.GetRavelType(FunctionConstructor, CallableType, new[] { from, to });
         }
-
+        internal RavelType TypePoolGetListType(RavelType element)
+        {
+            return RavelType.GetRavelType(ListConstructor, EnumerableType, new[] { element });
+        }
         private RavelObject GetListType(NeoEvaluator evaluator, RavelObject first)
         {
             RavelType f = first.GetValue<RavelType>();
-            RavelType func = RavelType.GetRavelType(ListConstructor, EnumerableType, new RavelType[] { f }, new());
+            RavelType func = TypePoolGetListType(f);
             return TypeType.GetRavelObject(func);
         }
         public RavelType GetMappedType(SysType type)
@@ -251,7 +249,27 @@ namespace Ravel.Values
         }
         internal RavelObject ObjGetString(NeoEvaluator evaluator, RavelObject arg)
         {
-            return StringType.GetRavelObject(arg.ToString());
+            return StringType.GetRavelObject($"Instance of {arg.Type}");
+        }
+        internal RavelObject IntGetString(NeoEvaluator evaluator, RavelObject arg)
+        {
+            return StringType.GetRavelObject(arg.GetValue<BigInteger>().ToString());
+        }
+        internal RavelObject StringGetString(NeoEvaluator evaluator, RavelObject arg)
+        {
+            return StringType.GetRavelObject(arg.GetValue<string>());
+        }
+        internal RavelObject BoolGetString(NeoEvaluator evaluator, RavelObject arg)
+        {
+            return StringType.GetRavelObject(arg.GetValue<bool>().ToString());
+        }
+        internal RavelObject TypeGetString(NeoEvaluator evaluator, RavelObject arg)
+        {
+            return StringType.GetRavelObject(arg.GetValue<RavelType>().ToString());
+        }
+        internal RavelObject VoidGetString(NeoEvaluator evaluator, RavelObject arg)
+        {
+            return StringType.GetRavelObject($"()");
         }
         internal RavelObject IntAdd(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
@@ -359,8 +377,8 @@ namespace Ravel.Values
         }
         internal RavelObject StringAdd(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
-            string l = left.ToString();
-            string r = right.ToString();
+            string l = left.GetValue<string>();
+            string r = right.GetValue<string>();
             return StringType.GetRavelObject(l + r);
         }
         internal RavelObject ObjAs(NeoEvaluator evaluator, RavelObject left, RavelObject right)
@@ -378,7 +396,13 @@ namespace Ravel.Values
         {
             StringBuilder builder = new();
             builder.Append('[');
-            builder.AppendJoin(' ', list.GetValue<List<RavelObject>>());
+            var last = evaluator.CurrentCallStack;
+            builder.AppendJoin(' ', list.GetValue<List<RavelObject>>().Select(i =>
+            {
+                i.TryReturnSonValue(evaluator, "ToString");
+                var text = evaluator.EvaluateInstantResult(last);
+                return text.GetValue<string>();
+            }));
             builder.Append(']');
             return StringType.GetRavelObject(builder.ToString());
         }

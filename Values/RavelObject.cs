@@ -49,30 +49,6 @@
             }
             return false;
         }
-        public override string ToString()
-        {
-            if (Type == TypePool.VoidType)
-            {
-                return "{}";
-            }
-            if (Type == TypePool.IntType)
-            {
-                return Value.ToString()!;
-            }
-            if (Type == TypePool.BoolType)
-            {
-                return Value.ToString()!.ToLower();
-            }
-            if (Type == TypePool.StringType)
-            {
-                return Value.ToString()!;
-            }
-            if (Type == TypePool.TypeType)
-            {
-                return Value.ToString()!;
-            }
-            return $"Instance of {Type}";
-        }
         public bool Equals(RavelObject obj)
         {
             return this == obj;

@@ -9,7 +9,7 @@ namespace Ravel.Values
     public sealed class DiagnosticList : IEnumerable<Diagnostic>
     {
         private readonly List<Diagnostic> _diagnostics = new();
-
+        public bool StopRecord { get; set; }
         public SourceText Text { get; }
 
         public DiagnosticList(SourceText text)
@@ -59,10 +59,19 @@ namespace Ravel.Values
 
         private void Rerror(TextSpan span, string message, int id)
         {
+            if(StopRecord)
+            {
+                return;
+            }
+            
             _diagnostics.Add(new(Text, span, message, id, EmergenceType.Rerror));
         }
         private void Rarning(TextSpan span, string message, int id)
         {
+            if (StopRecord)
+            {
+                return;
+            }
             _diagnostics.Add(new(Text, span, message, id, EmergenceType.Rarning));
         }
 
@@ -134,6 +143,11 @@ namespace Ravel.Values
         internal void ReportNotSupportedYet(TextSpan span)
         {
             Rerror(span, "特性仍未实现", 24);
+        }
+
+        internal void ReportBlockEmpty(BlockSyntax block)
+        {
+            Rerror(block.Span, "语句块不能为空", 25);
         }
     }
 }

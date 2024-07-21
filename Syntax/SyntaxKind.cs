@@ -86,5 +86,6 @@
         Const,
         Readonly,
         As,
+        ListExpression,
     }
 }

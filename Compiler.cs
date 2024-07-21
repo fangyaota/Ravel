@@ -15,7 +15,7 @@ namespace Ravel
             Text = text;
             Global = global;
 
-            Source = new($"{{{Text}}}");
+            Source = new(Text);
 
             _diagnostics = new(Source);
 
