@@ -55,7 +55,7 @@ namespace Ravel.Values
 
         private RavelObject VoidPrint(NeoEvaluator evaluator, RavelObject obj)
         {
-            Console.WriteLine(obj);
+            Console.WriteLine(obj.GetValue<string>());
             return TypePool.Unit;
         }
 

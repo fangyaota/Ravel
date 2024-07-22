@@ -1,7 +1,6 @@
 ﻿using Ravel.Binding;
+using Ravel.Text;
 using Ravel.Values;
-
-using System.Collections;
 
 namespace Ravel
 {
@@ -9,6 +8,7 @@ namespace Ravel
     public class NeoEvaluator
     {
         public BoundExpression Root { get; }
+        public SourceText Source { get; }
         public RavelGlobal Global { get; }
 
         public RavelCallStack CurrentCallStack { get; internal set; }
@@ -16,16 +16,23 @@ namespace Ravel
         public bool CalculateDone { get; private set; }
         public RavelObject Result { get; private set; }
 
-        public NeoEvaluator(BoundProgram root, RavelGlobal global, RavelScope? scope = null)
+        public DiagnosticList _diagnostics;
+        public IEnumerable<Diagnostic> Diagnostics => _diagnostics;
+
+        public NeoEvaluator(SourceText source, BoundProgram root, RavelGlobal global, RavelScope? scope = null)
         {
             Root = root.Expression;
+            Source = source;
+            _diagnostics = new(source);
             Global = global;
             RavelScope s = scope ?? new(Global.Variables);
             CurrentCallStack = new(s, root.Expression);
         }
-        internal NeoEvaluator(BoundExpression root, RavelGlobal global, RavelScope? scope = null)
+        internal NeoEvaluator(SourceText source, BoundExpression root, RavelGlobal global, RavelScope? scope = null)
         {
             Root = root;
+            Source = source;
+            _diagnostics = new(source);
             Global = global;
             RavelScope s = scope ?? new(Global.Variables);
             CurrentCallStack = new(s, root);
@@ -42,11 +49,23 @@ namespace Ravel
         }
         public RavelObject Evaluate()
         {
-            while (!CalculateDone)
+            try
             {
-                Step();
+                while (!CalculateDone)
+                {
+                    Step();
+                }
+                return Result;
             }
-            return Result;
+            catch(Exception e)
+            {
+                if (e is RavelEvaluateException exception)
+                {
+                    _diagnostics.ReportEvaluateException(exception);
+                    return Global.TypePool.Unit;
+                }
+                throw;
+            }
         }
         internal void Step()
         {
@@ -91,10 +110,14 @@ namespace Ravel
                 case BoundWhileExpression @while:
                     EvaluateWhile(@while);
                     break;
+                case BoundConvertExpression convert:
+                    EvaluateConvert(convert);
+                    break;
                 default:
                     throw new InvalidOperationException($"Unexpected node '{CurrentCallStack.Expression.Kind}'");
             }
         }
+
         internal void AddResultAndReturn(RavelObject result)
         {
             if (CurrentCallStack.Parent != null)
@@ -298,6 +321,21 @@ namespace Ravel
                     break;
             }
         }
+        private void EvaluateConvert(BoundConvertExpression convert)
+        {
+            switch (CurrentCallStack.SonResults.Count)
+            {
+                case 0:
+                    CurrentCallStack = new(CurrentCallStack, convert.Expression);
+                    break;
+                case 1:
+                    convert.Converter.Function.Invoke(this, CurrentCallStack.SonResults[0]);
+                    break;
+                case 2:
+                    AddResultAndReturn(CurrentCallStack.SonResults[^1]);
+                    break;
+            }
+        }
 
         private void EvaluateUnary(BoundUnaryExpression unary)
         {
@@ -366,133 +404,6 @@ namespace Ravel
             AddResultAndReturn(num.Value);
         }
 
-
-    }
-    public class RavelCallStack
-    {
-        public RavelCallStack(RavelCallStack? parent, BoundExpression expression)
-        {
-            Parent = parent;
-            LastFunctionCall = parent?.LastFunctionCall ?? this;
-            Expression = expression;
-            Scope = parent?.Scope ?? new();
-        }
-        public RavelCallStack(RavelScope scope, BoundExpression expression)
-        {
-            Parent = null;
-            LastFunctionCall = this;
-            Expression = expression;
-            Scope = scope;
-        }
-        private RavelCallStack(RavelCallStack basis, RavelObject append)
-        {
-            Parent = basis.Parent;
-            LastFunctionCall = basis.LastFunctionCall;
-            Expression = basis.Expression;
-            Scope = basis.Scope;
-            SonResults = new(append, basis.SonResults);
-        }
-        private RavelCallStack(RavelCallStack basis)
-        {
-            Parent = basis.Parent;
-            LastFunctionCall = basis.LastFunctionCall;
-            Expression = basis.Expression;
-            Scope = basis.Scope;
-            SonResults = SingleLinkedList<RavelObject>.Empty;
-        }
-        public RavelCallStack? Parent { get; }
-        public RavelCallStack LastFunctionCall { get; internal set; }
-        public BoundExpression Expression { get; }
-        public RavelScope Scope { get; internal set; }
-
-        public SingleLinkedList<RavelObject> SonResults { get; } = SingleLinkedList<RavelObject>.Empty;
-
-        public RavelCallStack AddSonResult(RavelObject result)
-        {
-            return new(this, result);
-        }
-        public RavelCallStack ClearSonResult()
-        {
-            return new(this);
-        }
-    }
-    public class SingleLinkedList<T> : IReadOnlyList<T>
-    {
-        private T Value { get; }
-        public SingleLinkedList<T>? Next { get; }
-        public int Count { get; }
-
-        public T this[int index]
-        {
-            get
-            {
-                if (index >= Count)
-                {
-                    throw new IndexOutOfRangeException(nameof(index));
-                }
-                SingleLinkedList<T>? list = this;
-                for (int i = 0; i < Count - 1 - index; i++)
-                {
-                    list = list!.Next;
-                }
-                return list!.Value;
-            }
-        }
-        public T this[Index index]
-        {
-            get
-            {
-                return index.IsFromEnd ? this[Count - index.Value] : this[index.Value];
-            }
-        }
-        public static SingleLinkedList<T> Empty
-        {
-            get
-            {
-                return new();
-            }
-        }
-        public SingleLinkedList(T value, SingleLinkedList<T>? next = null)
-        {
-            Value = value;
-            if (next == null || next.Count == 0)
-            {
-                Next = null;
-                Count = 1;
-            }
-            else
-            {
-                Next = next;
-                Count = next.Count + 1;
-            }
-        }
-        private SingleLinkedList()
-        {
-            Value = default!;
-            Count = 0;
-        }
-        public IEnumerator<T> GetEnumerator()
-        {
-            return GetReversed().Reverse().GetEnumerator();
-        }
-
-        public IEnumerable<T> GetReversed()
-        {
-            if(Count == 0)
-            {
-                yield break;
-            }
-            SingleLinkedList<T>? list = this;
-            while (list != null)
-            {
-                yield return list.Value;
-                list = list.Next;
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        
     }
 }

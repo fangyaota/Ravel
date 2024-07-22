@@ -1,4 +1,6 @@
-﻿namespace Ravel.Values
+﻿using System.Reflection;
+
+namespace Ravel.Values
 {
     public sealed class RavelRealFunction : RavelFunction
     {
@@ -26,7 +28,13 @@
         }
         public RavelObject InvokeReal(NeoEvaluator evaluator, params RavelObject[] objs)
         {
-            return (RavelObject)Func.DynamicInvoke(objs.Cast<object>().Prepend(evaluator).ToArray())!;
+            try
+            {
+                return (RavelObject)Func.DynamicInvoke(objs.Cast<object>().Prepend(evaluator).ToArray())!;
+            }catch(TargetInvocationException e)
+            {
+                throw e.InnerException!;
+            }
         }
     }
 }

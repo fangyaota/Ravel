@@ -1,10 +1,9 @@
 ﻿using Ravel.Binding;
 using Ravel.Syntax;
-using Ravel.Text;
-
+using Ravel.Values;
 using System.Collections;
 
-namespace Ravel.Values
+namespace Ravel.Text
 {
     public sealed class DiagnosticList : IEnumerable<Diagnostic>
     {
@@ -59,11 +58,11 @@ namespace Ravel.Values
 
         private void Rerror(TextSpan span, string message, int id)
         {
-            if(StopRecord)
+            if (StopRecord)
             {
                 return;
             }
-            
+
             _diagnostics.Add(new(Text, span, message, id, EmergenceType.Rerror));
         }
         private void Rarning(TextSpan span, string message, int id)
@@ -82,7 +81,7 @@ namespace Ravel.Values
 
         public void ReportTypeNotMatching(TextSpan span, RavelType type, RavelType wanted)
         {
-            Rerror(span, $"类型<{type}>与<{wanted.Name}>不匹配", 12);
+            Rerror(span, $"类型<{type}>与<{wanted}>不匹配", 12);
         }
 
         public void ReportNotAType(TextSpan span)
@@ -94,7 +93,7 @@ namespace Ravel.Values
         {
             Rerror(syntax.Span, $"目标变量不是只读", 14);
         }
-        
+
         public void ReportReadOnlyVariableChange(lDeclare ob, TextSpan span)
         {
             Rerror(span, $"只读变量<{ob.Name}>不可赋值", 15);
@@ -162,6 +161,10 @@ namespace Ravel.Values
         internal void ReportFailToCalculateWhenBinding(ExpressionSyntax syntax)
         {
             Rerror(syntax.Span, $"试图在绑定期间求值失败", 28);
+        }
+        internal void ReportEvaluateException(RavelEvaluateException exception)
+        {
+            Rerror(default, $"求值失败", 29);
         }
     }
 }

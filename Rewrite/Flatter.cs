@@ -1,14 +1,17 @@
 ﻿using Ravel.Binding;
+using Ravel.Text;
 using Ravel.Values;
 
 namespace Ravel.Rewrite
 {
     internal class Flatter : Rewriter
     {
+        public SourceText Source { get; }
         public RavelGlobal Global { get; }
 
-        public Flatter(BoundProgram expression, RavelGlobal global) : base(expression)
+        public Flatter(SourceText source, BoundProgram expression, RavelGlobal global) : base(expression)
         {
+            Source = source;
             Global = global;
         }
         protected override BoundExpression RewriteBlock(BoundBlockExpression block)
@@ -63,7 +66,7 @@ namespace Ravel.Rewrite
         {
             if (expression.IsConst)
             {
-                RavelObject obj = new NeoEvaluator(expression, Global).Evaluate();
+                RavelObject obj = new NeoEvaluator(Source, expression, Global).Evaluate();
                 result = new BoundLiteralExpression(obj);
                 return true;
             }

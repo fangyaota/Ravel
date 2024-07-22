@@ -19,7 +19,7 @@
         }
         public T GetValue<T>()
         {
-            return Value is T v ? v : throw new InvalidCastException($"cast from {Type} to {typeof(T).Name}");
+            return Value is T v ? v : throw new RavelEvaluateException($"cast from {Type} to {typeof(T).Name}");
         }
         public bool TryReturnSonValue(NeoEvaluator evaluator, string name)
         {

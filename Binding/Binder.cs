@@ -18,14 +18,14 @@ namespace Ravel.Binding
             }
         }
 
-        public SourceText Text { get; }
+        public SourceText Source { get; }
         public SyntaxTree Tree { get; }
         public RavelGlobal Global { get; }
 
         public Binder(SourceText text, SyntaxTree tree, RavelGlobal global, RavelScope? scope = null)
         {
-            Text = text;
-            _diagnostics = new(Text);
+            Source = text;
+            _diagnostics = new(Source);
             Tree = tree;
             Global = global;
             _scope = scope?.ToBound() ?? new BoundScope(global.Variables);
@@ -229,32 +229,30 @@ namespace Ravel.Binding
             {
                 return false;
             }
-            try
-            {
-                RavelObject bound_type_result = new NeoEvaluator(bound_type, Global).Evaluate();//?
-
-                ravelType = bound_type_result.GetValue<RavelType>();
-
-
-                if (!bound_type.IsConst)
-                {
-                    _diagnostics.ReportResultNotConst(defining.Type);
-                    return true;
-                }
-                if (!bound_type.Type.IsSonOrEqual(Global.TypePool.TypeType))
-                {
-                    _diagnostics.ReportNotAType(defining.Type.Span);
-                    _diagnostics.StopRecord = true;
-                    return false;
-                }
-
-                return true;
-            }
-            catch
+            NeoEvaluator eval = new(Source, bound_type, Global);
+            if (eval.Diagnostics.Any())
             {
                 _diagnostics.ReportFailToCalculateWhenBinding(defining.Type);
                 return false;
             }
+            RavelObject bound_type_result = eval.Evaluate();//?
+
+            ravelType = bound_type_result.GetValue<RavelType>();
+
+
+            if (!bound_type.IsConst)
+            {
+                _diagnostics.ReportResultNotConst(defining.Type);
+                return true;
+            }
+            if (!bound_type.Type.IsSonOrEqual(Global.TypePool.TypeType))
+            {
+                _diagnostics.ReportNotAType(defining.Type.Span);
+                _diagnostics.StopRecord = true;
+                return false;
+            }
+
+            return true;
         }
         private BoundExpression BindFunctionDefiningExpression(FunctionDefiningExpressionSyntax defining)
         {
@@ -409,8 +407,14 @@ namespace Ravel.Binding
                 RavelType needType = func.Type.GetFuncParametersIndex(i);
                 if (!paramType.IsSonOrEqual(needType))
                 {
-                    _diagnostics.ReportTypeNotMatching(syntax.Parameters[i].Span, paramType, needType);
-                    return func;
+                    if (TryImplictConvert(paramList[i], needType, out var convert))
+                    {
+                        paramList[i] = convert;
+                    }
+                    else
+                    {
+                        _diagnostics.ReportTypeNotMatching(syntax.Parameters[i].Span, paramType, needType);
+                    }
                 }
             }
 
@@ -495,7 +499,7 @@ namespace Ravel.Binding
             {
                 if (right.IsConst)
                 {
-                    NeoEvaluator temp_evaluator = new(right, Global);//?
+                    NeoEvaluator temp_evaluator = new(Source, right, Global);//?
                     RavelType result_type = temp_evaluator.Evaluate().GetValue<RavelType>();
                     return new BoundAsExpression(left, oper, right, result_type);
                 }

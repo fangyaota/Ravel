@@ -1,4 +1,4 @@
-﻿using Ravel.Values;
+﻿using Ravel.Text;
 
 namespace Ravel.Syntax
 {

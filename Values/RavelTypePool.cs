@@ -118,6 +118,7 @@ namespace Ravel.Values
             BoolType.SonVariables.TryDeclare("ToString", new RavelRealFunction(BoolGetString, BS, true).GetRavelObject(), true, true, true);
             TypeType.SonVariables.TryDeclare("ToString", new RavelRealFunction(TypeGetString, TS, true).GetRavelObject(), true, true, true);
 
+            ObjectType.ImplictConverters.Add(new RavelRealConverter(new RavelRealFunction(ObjToString, OS, true)));
 
             RavelType III = GetFuncType(IntType, IntType, IntType);
             RavelType IIB = GetFuncType(BoolType, IntType, IntType);
@@ -246,6 +247,12 @@ namespace Ravel.Values
             object l = left.GetValue<object>();
             object r = right.GetValue<object>();
             return l == r ? True : False;
+        }
+        internal RavelObject ObjToString(NeoEvaluator evaluator, RavelObject arg)
+        {
+            var last = evaluator.CurrentCallStack;
+            arg.TryReturnSonValue(evaluator, "ToString");
+            return evaluator.EvaluateInstantResult(last);
         }
         internal RavelObject ObjGetString(NeoEvaluator evaluator, RavelObject arg)
         {
@@ -383,7 +390,21 @@ namespace Ravel.Values
         }
         internal RavelObject ObjAs(NeoEvaluator evaluator, RavelObject left, RavelObject right)
         {
-            return left;
+            var type = right.GetValue<RavelType>();
+            if (left.Type.IsSonOrEqual(type))
+            {
+                return left;
+            }
+            var convert = left.Type.GetImplictConverter(type);
+            if(convert != null)
+            {
+                var last = evaluator.CurrentCallStack;
+                convert.Function.Invoke(evaluator, left);
+                return evaluator.EvaluateInstantResult(last);
+            }
+            var str = ObjToString(evaluator, left).GetValue<string>();
+            var t = ObjToString(evaluator, right).GetValue<string>();
+            throw new RavelEvaluateException($"cannot explict cast {str} from {left.Type} to {t}");
         }
         internal RavelObject TypePoint(NeoEvaluator evaluator, RavelObject first, RavelObject second)
         {

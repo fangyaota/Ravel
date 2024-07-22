@@ -34,10 +34,10 @@ namespace Ravel
 
             _diagnostics.AddRange(Binder.Diagnostics);
 
-            Flatter flatter = new(bound, Global);
+            Flatter flatter = new(Source, bound, Global);
             bound = flatter.Rewrite();
 
-            Evaluator = new(bound, Global, scope);
+            Evaluator = new(Source, bound, Global, scope);
         }
         public IEnumerable<Diagnostic> Diagnostics
         {

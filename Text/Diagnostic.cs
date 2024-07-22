@@ -1,6 +1,6 @@
-﻿using Ravel.Text;
+﻿using Ravel.Values;
 
-namespace Ravel.Values
+namespace Ravel.Text
 {
     public class Diagnostic
     {

@@ -1,5 +1,6 @@
 ﻿using Ravel;
 using Ravel.Syntax;
+using Ravel.Text;
 using Ravel.Values;
 
 using Spectre.Console;
@@ -274,7 +275,7 @@ public class NeoInteractor
         }
         else
         {
-            int index = Paras.Count - 1;
+            int index = Cursor_z;
             while (true)
             {
                 AnsiConsole.Ask("输入插入页码", index);
@@ -322,36 +323,45 @@ public class NeoInteractor
             );
         if (compiler.Diagnostics.Any())
         {
-            foreach (Diagnostic diagnostic in compiler.Diagnostics)
-            {
-                int start = compiler.Source.GetLineIndex(diagnostic.Span.Start);
-                int end = compiler.Source.GetLineIndex(diagnostic.Span.End);
-                Ravel.Text.TextLine startLine = compiler.Source.Lines[start];
-                Ravel.Text.TextLine endLine = compiler.Source.Lines[end];
-
-                AnsiConsole.MarkupLine($"[yellow]{diagnostic.ToString().EscapeMarkup()}[/]");
-
-                string first = startLine[0, diagnostic.Span.Start - startLine.Start];
-                string second = compiler.Source[diagnostic.Span];
-                string third = endLine[diagnostic.Span.End - endLine.Start, endLine.LengthIncludingLineBreaking].Replace("\r", "").Replace("\n", "");
-                AnsiConsole.Write(first);
-                AnsiConsole.Markup($"[underline red]{second.EscapeMarkup()}[/]");
-                AnsiConsole.Write(third);
-                AnsiConsole.WriteLine();
-            }
+            WriteDiagnostics(compiler.Diagnostics);
             Pause();
             return;
         }
         do
         {
             RavelObject result = compiler.Evaluator.Evaluate();
-            if (OutPut)
+            if (compiler.Evaluator.Diagnostics.Any())
+            {
+                WriteDiagnostics(compiler.Evaluator.Diagnostics);
+            }
+            else if (OutPut)
             {
                 AnsiConsole.Markup($"[yellow]==>[/]");
                 AnsiConsole.WriteLine(result.GetValue<string>());
             }
         } while (AnsiConsole.Confirm("重试吗？", false));
 
+    }
+
+    private void WriteDiagnostics(IEnumerable<Diagnostic> d)
+    {
+        foreach (Diagnostic diagnostic in d)
+        {
+            int start = compiler.Source.GetLineIndex(diagnostic.Span.Start);
+            int end = compiler.Source.GetLineIndex(diagnostic.Span.End);
+            TextLine startLine = compiler.Source.Lines[start];
+            TextLine endLine = compiler.Source.Lines[end];
+
+            AnsiConsole.MarkupLine($"[yellow]{diagnostic.ToString().EscapeMarkup()}[/]");
+
+            string first = startLine[0, diagnostic.Span.Start - startLine.Start];
+            string second = compiler.Source[diagnostic.Span];
+            string third = endLine[diagnostic.Span.End - endLine.Start, endLine.LengthIncludingLineBreaking].Replace("\r", "").Replace("\n", "");
+            AnsiConsole.Write(first);
+            AnsiConsole.Markup($"[underline red]{second.EscapeMarkup()}[/]");
+            AnsiConsole.Write(third);
+            AnsiConsole.WriteLine();
+        }
     }
 
     private static void Pause()

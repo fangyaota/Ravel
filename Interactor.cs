@@ -1,6 +1,7 @@
 ﻿using Ravel;
 using Ravel.Binding;
 using Ravel.Syntax;
+using Ravel.Text;
 using Ravel.Values;
 
 internal class Interactor
