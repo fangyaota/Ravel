@@ -3,45 +3,54 @@ namespace Ravel.Values
 {
     public sealed class RavelGlobal
     {
+        public bool Dynamic { get; set; } = false;
         public RavelGlobal()
         {
             SyntaxFacts = new();
 
             TypePool = new();
 
-            RavelType OT = TypePool.GetFuncType(TypePool.TypeType, TypePool.ObjectType);
+            RavelType OT = TypePool.FunctionTypeOf(TypePool.TypeType, TypePool.ObjectType);
+
+            RavelType III = TypePool.FunctionTypeOf(TypePool.IntType, TypePool.IntType, TypePool.IntType);
+
+            RavelType US = TypePool.FunctionTypeOf(TypePool.StringType, TypePool.VoidType);
+
+            RavelType SU = TypePool.FunctionTypeOf(TypePool.VoidType, TypePool.StringType);
+
+            RavelType SO = TypePool.FunctionTypeOf(TypePool.ObjectType, TypePool.StringType);
+
+            RavelType TT = TypePool.FunctionTypeOf(TypePool.ObjectType, TypePool.TypeType);
+
+            RavelType OU = TypePool.FunctionTypeOf(TypePool.VoidType, TypePool.ObjectType);
+
+            RavelType OU_C = TypePool.FunctionTypeOf(TypePool.ObjectType, OU);
+
+            RavelType OU_C_C = TypePool.FunctionTypeOf(TypePool.ObjectType, OU_C);
+
+
+
             RavelRealFunction typeOf = new(TypePool.ObjectTypeOf, OT, true);
 
-            RavelType III = TypePool.GetFuncType(TypePool.IntType, TypePool.IntType, TypePool.IntType);
             RavelRealFunction add = new(TypePool.IntAdd, III, true);
 
-            RavelType US = TypePool.GetFuncType(TypePool.StringType, TypePool.VoidType);
             RavelRealFunction input = new(VoidInput, US, false);
 
-            RavelType SU = TypePool.GetFuncType(TypePool.VoidType, TypePool.StringType);
             RavelRealFunction print = new(VoidPrint, SU, false);
 
             RavelRealFunction randint = new(Randint, III, false);
-
-            RavelType TT = TypePool.GetFuncType(TypePool.ObjectType, TypePool.TypeType);
-
-            RavelType OU = TypePool.GetFuncType(TypePool.VoidType, TypePool.ObjectType);
-
-            RavelType OU_C = TypePool.GetFuncType(TypePool.ObjectType, OU);
-
-            RavelType OU_C_C = TypePool.GetFuncType(TypePool.ObjectType, OU_C);
-
             RavelRealFunction callcc = new(Callcc, OU_C_C, false);
 
+            RavelRealFunction eval = new(Eval, SO, false);
             Variables = new(TypePool.SystemScope)
             {
-                new(typeOf.GetRavelObject(), "typeof", true, true),
-                new(add.GetRavelObject(), "add", false, false),
-                new(input.GetRavelObject(), "input", false, true, true),
-                new(print.GetRavelObject(), "print", false, true),
-                new(randint.GetRavelObject(), "randint", false, true),
-                new(TypePool.ListConstructor.Function.GetRavelObject(), "list", true, true),
-                new(callcc.GetRavelObject(), "callcc", false, true),
+                new(typeOf.GetRavelObject(), "typeof", true),
+                new(add.GetRavelObject(), "add", false),
+                new(input.GetRavelObject(), "input", true, true),
+                new(print.GetRavelObject(), "print", true),
+                new(randint.GetRavelObject(), "randint", true),
+                new(callcc.GetRavelObject(), "callcc", true),
+                new(eval.GetRavelObject(), "eval", true),
             };
         }
         public RavelSyntaxFacts SyntaxFacts { get; }
@@ -76,10 +85,25 @@ namespace Ravel.Values
                 evaluator.AddResult(result);
                 return TypePool.Unit;
             }
-            RavelType OU = TypePool.GetFuncType(TypePool.VoidType, TypePool.ObjectType);
+            RavelType OU = TypePool.FunctionTypeOf(TypePool.VoidType, TypePool.ObjectType);
             RavelRealFunction ret = new(Return, OU, false);
             function.Call(evaluator, ret.GetRavelObject());
             return evaluator.EvaluateInstantResult(current);
+        }
+        private RavelObject Eval(NeoEvaluator evaluator, RavelObject obj)
+        {
+            string str = obj.GetValue<string>();
+            Compiler compiler = new(str, this, evaluator.CurrentCallStack.Scope);
+            if (compiler.Diagnostics.Any())
+            {
+                throw new RavelEvaluateException("编译错误");
+            }
+            var result = compiler.Evaluator.Evaluate();
+            if (compiler.Evaluator.Diagnostics.Any())
+            {
+                throw new RavelEvaluateException("求值错误");
+            }
+            return result;
         }
     }
 }

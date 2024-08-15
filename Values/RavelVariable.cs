@@ -21,15 +21,13 @@
         public RavelType Type => IsFunctionSelf ? ravelObject.Type.ReturnType : ravelObject.Type;
         public string Name { get; }
         public bool IsReadOnly { get; }
-        public bool IsConst { get; }
         public VariableMode Mode { get; }
         public bool IsFunctionSelf { get; }
 
-        public RavelVariable(RavelObject ravelObject, string name, bool isConst, bool isReadOnly, bool functionSelf = false, VariableMode variable = VariableMode.Public)
+        public RavelVariable(RavelObject ravelObject, string name, bool isReadOnly, bool functionSelf = false, VariableMode variable = VariableMode.Public)
         {
             this.ravelObject = ravelObject;
             Name = name;
-            IsConst = isConst;
             IsReadOnly = isReadOnly;
             IsFunctionSelf = functionSelf;
             Mode = variable;

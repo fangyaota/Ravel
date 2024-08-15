@@ -162,9 +162,9 @@ namespace Ravel.Text
         {
             Rerror(syntax.Span, $"试图在绑定期间求值失败", 28);
         }
-        internal void ReportEvaluateException(RavelEvaluateException exception)
+        internal void ReportEvaluateException(TextSpan span, RavelEvaluateException exception)
         {
-            Rerror(default, $"求值失败", 29);
+            Rerror(span, $"求值失败：{exception.Message}", 29);
         }
     }
 }

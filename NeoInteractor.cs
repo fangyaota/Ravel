@@ -57,7 +57,7 @@ public class NeoInteractor
     public string GetText()
     {
         StringBuilder sb = new();
-        sb.Append("\n(");
+        sb.Append("(\n");
         sb.AppendJoin('\n', Lines);
         sb.Append("\n).ToString");
         return sb.ToString();
@@ -325,7 +325,10 @@ public class NeoInteractor
         {
             WriteDiagnostics(compiler.Diagnostics);
             Pause();
-            return;
+            if (!Global.Dynamic)
+            {
+                return;
+            }
         }
         do
         {
@@ -347,7 +350,7 @@ public class NeoInteractor
     {
         foreach (Diagnostic diagnostic in d)
         {
-            int start = compiler.Source.GetLineIndex(diagnostic.Span.Start);
+            int start = compiler!.Source.GetLineIndex(diagnostic.Span.Start);
             int end = compiler.Source.GetLineIndex(diagnostic.Span.End);
             TextLine startLine = compiler.Source.Lines[start];
             TextLine endLine = compiler.Source.Lines[end];
@@ -357,9 +360,9 @@ public class NeoInteractor
             string first = startLine[0, diagnostic.Span.Start - startLine.Start];
             string second = compiler.Source[diagnostic.Span];
             string third = endLine[diagnostic.Span.End - endLine.Start, endLine.LengthIncludingLineBreaking].Replace("\r", "").Replace("\n", "");
-            AnsiConsole.Write(first);
+            Console.Write(first);
             AnsiConsole.Markup($"[underline red]{second.EscapeMarkup()}[/]");
-            AnsiConsole.Write(third);
+            Console.Write(third);
             AnsiConsole.WriteLine();
         }
     }

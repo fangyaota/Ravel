@@ -14,7 +14,7 @@ namespace Ravel.Binding
 
         public string Name => Declare.Name;
 
-        public override bool IsConst => Declare.IsReadOnly;//?
+        public override bool IsConst => Declare.IsReadOnly && Type.IsConst;//?
 
         public lDeclare Declare { get; }
 

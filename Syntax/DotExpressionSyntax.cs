@@ -2,9 +2,9 @@
 
 namespace Ravel.Syntax
 {
-    internal class DotExpresionSyntax : ExpressionSyntax
+    internal class DotExpressionSyntax : ExpressionSyntax
     {
-        public DotExpresionSyntax(ExpressionSyntax left, SyntaxToken dot, SyntaxToken right)
+        public DotExpressionSyntax(ExpressionSyntax left, SyntaxToken dot, SyntaxToken right)
         {
             Left = left;
             Dot = dot;

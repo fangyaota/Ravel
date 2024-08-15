@@ -25,7 +25,7 @@ namespace Ravel.Values
         {
             if (obj.Length < RealParameters.Length)
             {
-                RavelType newType = TypePool.GetFuncType(ResultType, RealParameters[obj.Length..]);
+                RavelType newType = TypePool.FunctionTypeOf(ResultType, RealParameters[obj.Length..]);
                 evaluator.AddResult(new RavelParcialFunction(this, obj, newType).GetRavelObject());
                 return;
             }

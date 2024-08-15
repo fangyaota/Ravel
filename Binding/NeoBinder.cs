@@ -6,7 +6,7 @@ using System.IO;
 
 namespace Ravel.Binding
 {
-    public sealed class Binder
+    public sealed class NeoBinder
     {
         private readonly DiagnosticList _diagnostics;
         private BoundScope _scope;
@@ -22,7 +22,7 @@ namespace Ravel.Binding
         public SyntaxTree Tree { get; }
         public RavelGlobal Global { get; }
 
-        public Binder(SourceText text, SyntaxTree tree, RavelGlobal global, RavelScope? scope = null)
+        public NeoBinder(SourceText text, SyntaxTree tree, RavelGlobal global, RavelScope? scope = null)
         {
             Source = text;
             _diagnostics = new(Source);

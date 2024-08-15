@@ -15,6 +15,10 @@ namespace Ravel.Syntax
             {
                 if (tokens[i].Kind is SyntaxKind.Sharp)
                 {
+                    if(tokens[i+1].Text == "errorless")
+                    {
+                        global.Dynamic = true;
+                    }
                     while (i < tokens.Length && !tokens[i].Kind.IsEndOrLine())
                     {
                         i++;
@@ -157,7 +161,7 @@ namespace Ravel.Syntax
             {
                 SyntaxToken dot = MatchToken(SyntaxKind.Dot);
                 SyntaxToken right = MatchToken(SyntaxKind.Variable);
-                left = new DotExpresionSyntax(left, dot, right);
+                left = new DotExpressionSyntax(left, dot, right);
             }
             return left;
         }

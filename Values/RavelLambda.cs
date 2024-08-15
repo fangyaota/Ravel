@@ -25,9 +25,9 @@ namespace Ravel.Values
             evaluator.CurrentCallStack.LastFunctionCall = evaluator.CurrentCallStack;
             for (int i = 0; i < Expression.Parameters.Count; i++)
             {
-                sco.TryDeclare(Expression.Parameters[i].Name, obj[i], false, false);
+                sco.TryDeclare(Expression.Parameters[i].Name, obj[i], false);
             }
-            sco.TryDeclare("self", GetRavelObject(), true, false);
+            sco.TryDeclare("self", GetRavelObject(), true);
         }
     }
 }

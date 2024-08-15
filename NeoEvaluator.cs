@@ -61,7 +61,7 @@ namespace Ravel
             {
                 if (e is RavelEvaluateException exception)
                 {
-                    _diagnostics.ReportEvaluateException(exception);
+                    _diagnostics.ReportEvaluateException(default, exception);
                     return Global.TypePool.Unit;
                 }
                 throw;
@@ -390,7 +390,7 @@ namespace Ravel
                     CurrentCallStack = new(CurrentCallStack, defining.Expression);
                     break;
                 case 1:
-                    if (!CurrentCallStack.Scope.TryDeclare(defining.Declare.Name, CurrentCallStack.SonResults[^1], false, false))
+                    if (!CurrentCallStack.Scope.TryDeclare(defining.Declare.Name, CurrentCallStack.SonResults[^1], false))
                     {
                         throw new InvalidOperationException();
                     }

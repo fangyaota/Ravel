@@ -19,7 +19,7 @@
         }
         public T GetValue<T>()
         {
-            return Value is T v ? v : throw new RavelEvaluateException($"cast from {Type} to {typeof(T).Name}");
+            return Value is T v ? v : throw new RavelEvaluateException($"无法转换{typeof(T).Name}至{Type}");
         }
         public bool TryReturnSonValue(NeoEvaluator evaluator, string name)
         {
@@ -44,7 +44,7 @@
         {
             if (Type.TryGetSonVariable(name, out RavelVariable? variable))
             {
-                SonValues![name] = obj;
+                SonValues[name] = obj;
                 return true;
             }
             return false;

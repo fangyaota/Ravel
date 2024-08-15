@@ -27,13 +27,13 @@ namespace Ravel.Values
         {
             Variables.Add(variable.Name, variable);
         }
-        public bool TryDeclare(string name, RavelObject obj, bool isReadOnly, bool isConst, bool functionSelf = false, VariableMode mode = VariableMode.Public)
+        public bool TryDeclare(string name, RavelObject obj, bool isReadOnly, bool functionSelf = false, VariableMode mode = VariableMode.Public)
         {
             if (Variables.ContainsKey(name))
             {
                 return false;
             }
-            Add(new RavelVariable(obj, name, isReadOnly, isConst, functionSelf, mode));
+            Add(new RavelVariable(obj, name, isReadOnly, functionSelf, mode));
             return true;
         }
         public bool TryGetVariable(string name, out RavelVariable variable, VariableMode mode = VariableMode.Public)
